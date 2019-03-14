@@ -1,0 +1,32 @@
+n <- 100
+set.seed(1)
+x <- round(runif(n, 1, n))
+set.seed(2)
+y <- round(runif(n, 1, n))
+train.df <- data.frame(x, y)
+
+set.seed(1)
+x.test <- round(runif(n, 1, n))
+set.seed(2)
+y.test <- round(runif(n, 1, n))
+test.df <- data.frame(x.test, y.test)
+
+k <- train(classes)
+
+plot(test.df, col=k)
+
+
+# class labels: simple distance from origin
+classes <- ifelse(x^2 + y^2 > 60^2, "blue", "orange")
+classes.test <- ifelse(x.test^2 + y.test^2 > 60^2, "blue", "orange")
+
+grid <- expand.grid(x=1:100, y=1:100)
+classes.grid <- knn(train.df, grid, classes, k=25, prob=TRUE)  # note last argument
+prob.grid <- attr(classes.grid, "prob")
+prob.grid <- ifelse(classes.grid == "blue", prob.grid, 1 - prob.grid)
+
+# plot the boundary
+contour(x=1:100, y=1:100, z=matrix(prob.grid, nrow=100), levels=0.5,
+        col="grey", drawlabels=FALSE, lwd=2)
+# add points from test dataset
+points(test.df, col=classes.test)
