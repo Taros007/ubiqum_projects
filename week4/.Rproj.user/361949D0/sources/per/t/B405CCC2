@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1552468295521.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "B405CCC2",
+    "lastKnownWriteTime" : 0,
+    "last_content_update" : 1552468295521,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "507259C3",
+        "caption" : "surveyData",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=surveyData&cache_key=507259C3",
+        "displayedObservations" : 9898,
+        "environment" : "",
+        "object" : "surveyData",
+        "preview" : 0,
+        "totalObservations" : 9898,
+        "variables" : 7
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
