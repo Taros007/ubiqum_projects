@@ -1,0 +1,67 @@
+C50
+ Accuracy     Kappa
+0.9256265 0.8410940
+
+C50 with only salary, age_factors, credit
+Accuracy     Kappa
+0.9215845 0.8328793
+
+C50 with only salary, age_factors
+ Accuracy     Kappa
+0.9211803 0.8315588
+
+RF
+ Accuracy     Kappa
+0.9179466 0.8255286
+
+RF with only salary, age_factors, credit    
+Accuracy     Kappa 
+0.9195635 0.8291094
+
+RF with only salary, age_factors
+Accuracy     Kappa
+0.9215845 0.8331591i
+
+RF, mtry=2
+ Accuracy     Kappa
+0.9227971 0.8350834
+
+GBM with only salary, age_factors
+ Accuracy     Kappa
+0.9223929 0.8346022
+
+XGBooast
+Accuracy     Kappa
+0.9167340 0.8226163
+
+Explored data via various plots: notice imbalance in 
+Subsampling didn't work, despite class imbalance
+Normalization -> only center
+metric -> Kappa
+
+
+C5.0
+
+7424 samples
+   2 predictor
+   2 classes: 'Acer', 'Sony'
+
+Pre-processing: centered (4)
+Resampling: Cross-Validated (10 fold, repeated 1 times)
+Summary of sample sizes: 6681, 6682, 6681, 6683, 6681, 6683, ...
+Resampling results across tuning parameters:
+
+  model  winnow  trials  Accuracy   Kappa
+  rules  FALSE    1      0.8323295  0.6645833
+  rules  FALSE   10      0.9218762  0.8335472
+  rules   TRUE    1      0.8402810  0.6797925
+  rules   TRUE   10      0.9210676  0.8318416
+  tree   FALSE    1      0.8323295  0.6645833
+  tree   FALSE   10      0.9221486  0.8343142
+  tree    TRUE    1      0.8402810  0.6797925
+  tree    TRUE   10      0.9210705  0.8321215
+
+Kappa was used to select the optimal model using the largest value.
+The final values used for the model were trials = 10, model = tree and winnow
+ = FALSE.
+
