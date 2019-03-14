@@ -89,15 +89,16 @@ training <- surveyData[inTraining,]
 testing <- surveyData[-inTraining,]
 
 #10 fold cross validation
-fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, sampling = "up", classProbs = TRUE)
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, classProbs = TRUE)
 
-#train Random Forest Regression model with a tuneLenght = 1 (trains with 1 mtry value for RandomForest)
-rfFit1 <- train(brand~salary + elevel + car + zipcode + credit + as.factor(Age_Level),
+#train Random Forest Regression model
+rfFit1 <- train(brand~salary + as.factor(Age_Level),
                 data = training,
                 method = "rf",
                 preProcess = c("center"),
                 trControl=fitControl,
-                metric = "Kappa")
+                metric = "Kappa",
+                tuneLength = 2)
 
 #Predict
 predictions <- predict(rfFit1, testing)
@@ -105,6 +106,9 @@ confusionMatrix(predictions, testing$brand)
 
 postResample(predictions, testing$brand)
 
+#Check important variables
+varTun <- varImp(rfFit1)
+plot(varTun, main = "Top variance importance")
 
 #Save model to avoid future retraining
 saveRDS(rfFit1, './output/RF.rds')
