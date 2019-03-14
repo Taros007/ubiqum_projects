@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1552562126640.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4294125141",
+    "id" : "C7E266B0",
+    "lastKnownWriteTime" : 1552565466,
+    "last_content_update" : 1552565466018,
+    "path" : "~/Ubiqum/projects/week4/R/surveydata.R",
+    "project_path" : "R/surveydata.R",
+    "properties" : {
+        "cursorPosition" : "21,13",
+        "scrollLine" : "9"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
