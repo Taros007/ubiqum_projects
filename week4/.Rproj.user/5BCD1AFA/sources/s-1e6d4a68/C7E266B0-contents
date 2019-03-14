@@ -6,6 +6,8 @@ registerDoParallel(cl)
 
 #Import dataset
 library(readr)
+library(tidyverse)
+library(plyr)
 surveyData = read.csv('./input/CompleteResponses.csv')
 
 #Transform variables
@@ -16,8 +18,21 @@ surveyData$brand <- factor(surveyData$brand,
                               levels = c(0,1),
                               labels = c("Acer", "Sony"))
 
-######EDA##### [to be commented out later]
-library(tidyverse)
+
+##Bin age, with optimalization for plotting
+lower_bound <- c(0,40,60)
+surveyData$Age_Level<- findInterval(surveyData$age, lower_bound)
+# Create Definition Table
+Age_Level <- c(1,2,3)
+Age_Brackets <- c("<40", "40-60", "60+")
+Age_Table <- data.frame(Age_Level, Age_Brackets)
+#Join with surveyData Frame
+surveyData <- join(surveyData, Age_Table, by = "Age_Level")
+surveyData$Age_Brackets <- as.factor(surveyData$Age_Brackets)
+ggplot(surveyData, aes(Age_Brackets, fill = brand)) + 
+  geom_bar() +
+  ggtitle("Age Bin Distribution")
+
 library(caret)
 library(e1071)
 str(surveyData)
@@ -61,6 +76,11 @@ summary(surveyData)
 # ##FINDING: brand 1 is being bought by people with higher salaries
 
 #MAKE SCATTER PLOT AGE, SALARY with colors for brand
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+ggplot(surveyData, aes(x = salary, y = age, color = brand)) + 
+  geom_point() +
+  scale_color_manual(values = cbbPalette)
+  
 
 #Create training and test set with 75%
 set.seed(998)
@@ -72,16 +92,19 @@ testing <- surveyData[-inTraining,]
 fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, sampling = "up", classProbs = TRUE)
 
 #train Random Forest Regression model with a tuneLenght = 1 (trains with 1 mtry value for RandomForest)
-rfFit1 <- train(brand~., data = training, method = "rf", preProcess = c("center"), trControl=fitControl, metric = "Kappa")
+rfFit1 <- train(brand~salary + elevel + car + zipcode + credit + as.factor(Age_Level),
+                data = training,
+                method = "rf",
+                preProcess = c("center"),
+                trControl=fitControl,
+                metric = "Kappa")
 
 #Predict
 predictions <- predict(rfFit1, testing)
 confusionMatrix(predictions, testing$brand)
 
-postResample(predictions, surveyData)
+postResample(predictions, testing$brand)
 
-#Try to solve class imbalance
-summary(surveyData$brand)
 
 #Save model to avoid future retraining
 saveRDS(rfFit1, './output/RF.rds')

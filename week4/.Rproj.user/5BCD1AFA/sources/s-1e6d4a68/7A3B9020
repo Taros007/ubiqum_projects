@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1552567149534.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "7A3B9020",
+    "lastKnownWriteTime" : 1552562017,
+    "last_content_update" : 1552562017,
+    "path" : "~/Ubiqum/projects/week3/R/iris.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "77,2",
+        "scrollLine" : "61"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

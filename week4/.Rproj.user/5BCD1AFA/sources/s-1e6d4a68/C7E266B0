@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "4294125141",
+    "hash" : "0",
     "id" : "C7E266B0",
-    "lastKnownWriteTime" : 1552565466,
-    "last_content_update" : 1552565466018,
+    "lastKnownWriteTime" : 1552571568,
+    "last_content_update" : 1552571568530,
     "path" : "~/Ubiqum/projects/week4/R/surveydata.R",
     "project_path" : "R/surveydata.R",
     "properties" : {
-        "cursorPosition" : "21,13",
-        "scrollLine" : "9"
+        "cursorPosition" : "95,32",
+        "scrollLine" : "86"
     },
     "relative_order" : 1,
     "source_on_save" : false,
