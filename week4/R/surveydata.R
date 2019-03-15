@@ -7,6 +7,8 @@ registerDoParallel(cl)
 #Import dataset
 library(tidyverse)
 library(plyr)
+library(caret)
+library(e1071)
 
 # Load data =================================
 surveyData = read.csv('./input/CompleteResponses.csv')
@@ -39,8 +41,6 @@ ggplot(surveyData, aes(Age_Brackets, fill = brand)) +
 #source('./R/evenbins.R')
 #surveyData$salary_bin <- evenbins(surveyData$salary, 3)
 
-library(caret)
-library(e1071)
 str(surveyData)
 summary(surveyData)
 
