@@ -5,7 +5,6 @@ cl <- makeCluster(3)
 registerDoParallel(cl)
 
 #Import dataset
-library(readr)
 library(tidyverse)
 library(plyr)
 surveyData = read.csv('./input/CompleteResponses.csv')
@@ -94,7 +93,7 @@ fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, clas
 #train Random Forest Regression model
 rfFit1 <- train(brand~salary + as.factor(Age_Level),
                 data = training,
-                method = "C5.0",
+                method = "rf",
                 preProcess = c("center"),
                 trControl=fitControl,
                 metric = "Kappa",
