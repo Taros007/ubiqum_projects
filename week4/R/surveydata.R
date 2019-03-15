@@ -80,7 +80,7 @@ summary(surveyData)
 # ggplot(data = surveyData) + geom_count(mapping = aes(x = elevel, y = brand))
 # 
 # ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(brand, salary, FUN = median), y = salary))
-# ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(salary, age, FUN = median), y = age))
+ ggplot(surveyData, aes(x = age, y = salary)) + geom_point() + geom_smooth(method='lm',formula=y~x)
 # ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(brand, credit, FUN = median), y = credit))
 # ##FINDING: brand 1 is being bought by people with higher salaries
 
@@ -102,7 +102,7 @@ testing <- surveyData[-inTraining,]
 fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE)
 
 #train Random Forest Regression model
-rfFit1 <- train(brand~salary + as.factor(Age_Level),
+rfFit1 <- train(brand~salary + as.factor(Age_Level), #zipcode + car + elevel,
                 data = training,
                 method = "C5.0",
                 preProcess = c("center"),
