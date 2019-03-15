@@ -102,7 +102,7 @@ testing <- surveyData[-inTraining,]
 fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE)
 
 #train Random Forest Regression model
-rfFit1 <- train(brand~salary_bin + as.factor(Age_Level),
+rfFit1 <- train(brand~salary + as.factor(Age_Level),
                 data = training,
                 method = "C5.0",
                 preProcess = c("center"),
