@@ -1,14 +1,17 @@
-
-#Prepare clusters to optimze computing time
+# Prepare clusters =================================
 library(doParallel)
 cl <- makeCluster(3)
 registerDoParallel(cl)
 
+# Load libraries =================================
 #Import dataset
 library(tidyverse)
 library(plyr)
+
+# Load data =================================
 surveyData = read.csv('./input/CompleteResponses.csv')
 
+# Transformation =================================
 #Transform variables
 surveyData$elevel <- as.factor(surveyData$elevel)
 surveyData$car <- as.factor(surveyData$car)
@@ -32,12 +35,18 @@ ggplot(surveyData, aes(Age_Brackets, fill = brand)) +
   geom_bar() +
   ggtitle("Age Bin Distribution")
 
+##Binning of Salary
+#source('./R/evenbins.R')
+#surveyData$salary_bin <- evenbins(surveyData$salary, 3)
+
 library(caret)
 library(e1071)
 str(surveyData)
 summary(surveyData)
 
 #no NAs found
+
+# Initial data exploration=================================
 
 # ##Explore variation
 # #First categoricals and ordinals
@@ -59,8 +68,9 @@ summary(surveyData)
 # 
 # #Second for categorical and ordinals - vs salary
 # ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(car, salary, FUN = median), y = salary))
-# ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(zipcode, salary, FUN = median), y = salary))
-# ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(elevel, salary, FUN = median), y = salary))
+#ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(zipcode, salary, FUN = median), y = salary))
+#ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(zipcode, age, FUN = median), y = age))
+ # ggplot(surveyData) + geom_boxplot(mapping = aes(x = reorder(elevel, salary, FUN = median), y = salary))
 # 
 
 # ##Explore relations between independent and dependent variable
@@ -80,6 +90,7 @@ ggplot(surveyData, aes(x = salary, y = age, color = brand)) +
   geom_point() +
   scale_color_manual(values = cbbPalette)
   
+# Training of model =================================
 
 #Create training and test set with 75%
 set.seed(998)
@@ -88,16 +99,18 @@ training <- surveyData[inTraining,]
 testing <- surveyData[-inTraining,]
 
 #10 fold cross validation
-fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 1, classProbs = TRUE)
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE)
 
 #train Random Forest Regression model
-rfFit1 <- train(brand~salary + as.factor(Age_Level),
+rfFit1 <- train(brand~salary_bin + as.factor(Age_Level),
                 data = training,
-                method = "rf",
+                method = "C5.0",
                 preProcess = c("center"),
                 trControl=fitControl,
                 metric = "Kappa",
                 tuneLength = 2)
+
+# Predicting testset ================================
 
 #Predict
 predictions <- predict(rfFit1, testing)
@@ -109,10 +122,56 @@ postResample(predictions, testing$brand)
 varTun <- varImp(rfFit1)
 plot(varTun, main = "Top variance importance")
 
+# Predict Survey incomplete ================================
+
+##Apply model to new dataset
+surveyIncom <- read.csv('./input/SurveyIncomplete.csv')
+
+#Repeat preprocessing of data
+#Transform variables
+surveyIncom$elevel <- as.factor(surveyIncom$elevel)
+surveyIncom$car <- as.factor(surveyIncom$car)
+surveyIncom$zipcode <- as.factor(surveyIncom$zipcode)
+
+##Bin age, with optimalization for plotting
+lower_bound <- c(0,40,60)
+surveyIncom$Age_Level<- findInterval(surveyIncom$age, lower_bound)
+# Create Definition Table
+Age_Level <- c(1,2,3)
+Age_Brackets <- c("<40", "40-60", "60+")
+Age_Table <- data.frame(Age_Level, Age_Brackets)
+#Join with surveyData Frame
+surveyIncom <- join(surveyIncom, Age_Table, by = "Age_Level")
+surveyIncom$Age_Brackets <- as.factor(surveyIncom$Age_Brackets)
+# ggplot(surveyIncom, aes(Age_Brackets, fill = brand)) + 
+#   geom_bar() +
+#   ggtitle("Age Bin Distribution")
+#Predict & merge into file
+
+#Binning of salary
+##source('./R/evenbins.R')
+##surveyIncom$salary_bin <- evenbins(surveyIncom$salary, 3)
+
+surveyIncom$brand <- predict(rfFit1, surveyIncom)
+
+#MAKE SCATTER PLOT AGE, SALARY with colors for predicted brand
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+ggplot(surveyIncom, aes(x = salary, y = age, color = brand)) + 
+  geom_point() +
+  scale_color_manual(values = cbbPalette)
+
+#Summary of predicted data
+summary(surveyIncom)
+
+# Closing actions ================================
+
+#Save predictions
+write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
+
 #Save model to avoid future retraining
 saveRDS(rfFit1, './output/RF.rds')
 
-#Load model again
+#Load model again (learning)
 rfFit1 <- readRDS('./output/RF.rds')
 
 # Stop Cluster. 
