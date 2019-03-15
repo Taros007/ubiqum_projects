@@ -148,7 +148,7 @@ surveyIncom$Age_Brackets <- as.factor(surveyIncom$Age_Brackets)
 #   ggtitle("Age Bin Distribution")
 #Predict & merge into file
 
-#Binning of salary
+#Binning of salary - turned out the be ineffective, hence commented out
 ##source('./R/evenbins.R')
 ##surveyIncom$salary_bin <- evenbins(surveyIncom$salary, 3)
 
@@ -167,6 +167,7 @@ summary(surveyIncom)
 
 #Save predictions
 write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
+write.csv(surveyData, './output/SurveyData.csv')
 
 #Save model to avoid future retraining
 saveRDS(rfFit1, './output/RF.rds')
