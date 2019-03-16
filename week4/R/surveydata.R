@@ -170,10 +170,10 @@ write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
 write.csv(surveyData, './output/SurveyData.csv')
 
 #Save model to avoid future retraining
-saveRDS(rfFit1, './output/RF.rds')
+#saveRDS(rfFit1, './output/RF.rds')
 
 #Load model again (learning)
-rfFit1 <- readRDS('./output/RF.rds')
+#rfFit1 <- readRDS('./output/RF.rds')
 
 # Stop Cluster. 
 stopCluster(cl)                   
