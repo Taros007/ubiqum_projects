@@ -1,0 +1,380 @@
+---
+title: "Brand prediction"
+author: "Joan Claverol - Data mentor"
+date: "16 de marzo de 2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    css: JB_style.css 
+    smaller: true
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+
+# libraries to use
+if(require(pacman) == FALSE){
+  install.packages("pacman")
+}
+
+pacman::p_load(knitr, kableExtra, gridExtra)
+```
+
+## Defining the problem {.smaller}
+
+The sales team engaged a market research firm to conduct a survey of our existing customers. 
+
+* Objective: *find out which of two brands of computers our customers prefer*. 
+
+* Problem: the answer to the brand preference question was not properly captured for all of the respondents.
+
+Our work in that task would be:
+
+1. to investigate if customer responses to some survey questions (e.g. income, age, etc.) enable us to predict the answer to the brand preference question.
+
+2. to make those predictions and provide the sales team with a complete view of what brand our customers prefer.
+
+## Import the data {.smaller}
+
+```{r import the data}
+completed_survey <- read.csv("../data/CompleteResponses.csv")
+incompleted_survey <- read.csv("../data/SurveyIncomplete.csv")
+```
+
+```{r understanding the data we have, echo=TRUE, message=F}
+library(dplyr)
+glimpse(completed_survey)
+glimpse(incompleted_survey)
+```
+
+## Data wrangling: giving names
+
+Let's put the brand information in a nicer way:
+
+```{r echo=T, message=F, warning=FALSE}
+# transform the survey result to names
+completed_survey$brand_name <- apply(completed_survey["brand",drop=F],
+                                     MARGIN = 1,
+                                     function(x) if_else(x == 0, "Acer", "Sony"))
+```
+
+```{r warning=F, message=F}
+kable(head(completed_survey), format = "markdown") %>%
+  kable_styling(bootstrap_options = "striped", font_size = 7)
+```
+
+## Data wrangling: tranforming to factor
+
+Now is the moment to transform the variables to factors from the incomplete survay:
+
+```{r echo=TRUE}
+categ_var <- c("elevel", "car", "zipcode", "brand_name")
+completed_survey[categ_var] <- lapply(completed_survey[categ_var], as.factor)
+
+# let's check the structure of the dataset
+glimpse(completed_survey)
+```
+
+```{r warning=FALSE, echo=TRUE}
+# We can apply the same process to the incomplete survey
+incompleted_survey$brand_name <- apply(incompleted_survey["brand",drop=F],
+                                       MARGIN = 1,
+                                       function(x) if_else(x == 0, "Acer", "Sony"))
+incompleted_survey[categ_var] <- lapply(incompleted_survey[categ_var], as.factor)
+```
+
+## 1st exploration
+
+Understand the brand preference with the **complete survey**.
+
+* Table of absolute frequency 
+
+```{r echo=TRUE}
+table(completed_survey$brand_name, dnn = c("Brand"))
+```
+
+* Table of relative frequency
+
+```{r echo=TRUE}
+round(prop.table(table(completed_survey$brand_name, dnn = c("Brand"))),2)
+```
+
+## 1st modalisation
+
+```{r, echo=TRUE, message=FALSE}
+library(caret)
+set.seed(2019)
+
+# train and test
+train_ids <- createDataPartition(y = completed_survey$brand,
+                                 p = 0.75,
+                                 list = F)
+train <- completed_survey[train_ids,]
+test <- completed_survey[-train_ids,]
+
+# cross validation
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 5,
+                     number = 3)
+
+# Creating the model with caret and using the model rpart
+mod_caret_dt <- caret::train(brand_name ~ .,
+                             data = train %>% dplyr::select(-brand),
+                             method = "rpart",
+                             trControl = ctrl)
+```
+
+## 1st error check: Accuracy and kappa
+
+### Results on train
+
+```{r echo=TRUE}
+train_results <- predict(object = mod_caret_dt, 
+                         newdata = train)
+postResample(train$brand_name, train_results)
+```
+
+### Results on test 
+
+```{r echo=TRUE}
+test_results <- predict(object = mod_caret_dt, 
+                        newdata = test)
+postResample(test$brand_name, test_results)
+```
+
+## 1st error check: variable importance
+
+```{r fig.align="center", fig.height=4.5, message=F, warning=F}
+temp <- as.data.frame(matrix(nrow = length(varImp(mod_caret_dt)$importance$Overall)))
+temp$var_name <- row.names(varImp(mod_caret_dt)$importance)
+temp$var_importance <- varImp(mod_caret_dt)$importance$Overall
+
+library(ggplot2)
+plot_importance <- temp %>%
+  filter(var_importance > 0) %>%
+  ggplot() + geom_col(aes(x = reorder(var_name, desc(-var_importance)), 
+                          y = var_importance), fill = "red", width = 0.5) + 
+    coord_flip() + theme_bw() + 
+    labs(title = "Importance of the variables in the model",
+         y = "Importance")
+plot_importance + theme(axis.title.y = element_blank())
+```
+
+## 1st error check: confusion matrix
+
+### Confusion matrix on train
+
+```{r message=F, warning=F, echo=T}
+round(prop.table(confusionMatrix(train$brand_name, train_results)$table),2)
+```
+
+
+### Confusion matrix on test
+
+```{r message=F, warning=F, echo=T}
+round(prop.table(confusionMatrix(test$brand_name, test_results)$table),2)
+```
+
+## 2nd exploration
+
+Looking for the relation between the important variable and brand. **Goal** create a model that is not overfitted to the data:
+
+```{r echo=TRUE, fig.align="center", fig.height=4, fig.width=7}
+completed_survey %>% 
+  ggplot(aes(age, salary)) +
+    geom_point(aes(color = brand_name))
+```
+
+## 2nd modalisation
+
+This time im only going to use **salary** and **age** to maket the predictions:
+
+```{r}
+# Creating the model with caret and using the model rpart
+mod_caret_dt_subs <- caret::train(brand_name ~ salary + age,
+                                  data = train %>% dplyr::select(-brand),
+                                  method = "rpart",
+                                  trControl = ctrl)
+```
+
+### Results on train
+
+```{r echo=TRUE}
+train_results_2ndmod <- predict(object = mod_caret_dt_subs, 
+                                newdata = train)
+postResample(train$brand_name, train_results_2ndmod)
+```
+
+### Results on test 
+
+```{r echo=TRUE}
+test_results_2ndmod <- predict(object = mod_caret_dt_subs, 
+                               newdata = test)
+postResample(test$brand_name, test_results_2ndmod)
+```
+
+## 2nd error check: confusion matrix
+
+We are going to compare the confusion matrix for the first model (all the variables) and the model with salary and age:
+
+### Rpart model with all the variables
+
+```{r echo=T}
+
+round(prop.table(confusionMatrix(test$brand_name, test_results)$table),2)
+```
+
+### Rpart model with only salary and age
+
+```{r echo=T}
+round(prop.table(confusionMatrix(test$brand_name, test_results_2ndmod)$table),2)
+```
+
+## 2nd error check: visualization of the errors
+
+```{r fig.align="center", fig.width = 10}
+test$pred1_brand_name <- test_results
+test$pred2_brand_name <- test_results_2ndmod
+
+plot1 <- test %>% 
+  ggplot(aes(x = age, y = salary)) +
+    geom_point(aes(color = (brand_name != pred1_brand_name))) +
+    labs(title = "Rpart model error with all variables") +
+    scale_color_manual(values = c("white","red")) +
+    theme(legend.position="none")
+
+plot2 <- test %>% 
+  ggplot(aes(x = age, y = salary)) +
+    geom_point(aes(color = (brand_name != pred2_brand_name))) +
+    labs(title = "Rpart model error with only salary and age") +
+    scale_color_manual(values = c("white","red")) +
+    theme(legend.position="none")
+
+library(gridExtra)
+grid.arrange(plot1, plot2, nrow = 1)
+```
+
+## 3rd modalization
+
+Creation of the model with **KNN**
+
+```{r echo=T}
+# Creating the model with caret and using the model rpart
+mod_caret_knn_subs <- caret::train(brand_name ~ salary + age,
+                                   data = train %>% dplyr::select(-brand),
+                                   method = "knn",
+                                   trControl = ctrl,
+                                   preProcess = c("center","scale")) 
+```
+
+## 3rd error check: train and test metrics
+
+### Results on train
+
+```{r echo=TRUE}
+train_results_3rdmod <- predict(object = mod_caret_knn_subs, 
+                                newdata = train)
+postResample(train$brand_name, train_results_3rdmod)
+```
+
+### Results on test 
+
+```{r echo=TRUE}
+test_results_3rdmod <- predict(object = mod_caret_knn_subs, 
+                                 newdata = test)
+postResample(test$brand_name, test_results_3rdmod)
+```
+
+## 3rd error check: confusion matrix
+
+### rpart model with only salary and age
+
+```{r echo=T}
+round(prop.table(confusionMatrix(test$brand_name, test_results_2ndmod)$table),2)
+```
+
+### knn model with only salary and age
+
+```{r echo=T}
+round(prop.table(confusionMatrix(test$brand_name, test_results_3rdmod)$table),2)
+```
+
+## 3rd error check: visualization of the errors
+
+```{r fig.align="center", fig.width = 10}
+test$pred3_brand_name <- test_results_3rdmod
+
+plot3 <- test %>% 
+  ggplot(aes(x = age, y = salary)) +
+    geom_point(aes(color = (brand_name != pred3_brand_name))) +
+    labs(title = "Knn model error with only salary and age") +
+    scale_color_manual(values = c("white","red")) +
+    theme(legend.position="none")
+
+library(gridExtra)
+grid.arrange(plot2, plot3, nrow = 1)
+```
+
+## 4rth modalisation: trying SVM algorithm
+
+```{r echo=T, message=F, warning=F}
+library(e1071)
+mod_svm <- svm(brand_name ~ salary + age, 
+               data = train)
+```
+
+### Results on train 
+
+```{r echo=TRUE}
+train_results_4rthmod <- predict(object = mod_svm, 
+                                newdata = train)
+postResample(train$brand_name, train_results_4rthmod)
+```
+
+### Results on test 
+
+```{r echo=TRUE}
+test_results_4rthmod <- predict(object = mod_svm, 
+                                newdata = test)
+postResample(test$brand_name, test_results_4rthmod)
+```
+
+## 4rth error check: confusion matrix
+
+### KNN model with only salary and age
+
+```{r echo=T}
+# rpart model with only salary and age
+round(prop.table(confusionMatrix(test$brand_name, test_results_3rdmod)$table),3)
+```
+
+### SVM model with only salary and age
+
+```{r echo=T}
+# rpart model with only salary and age
+round(prop.table(confusionMatrix(test$brand_name, test_results_4rthmod)$table),3)
+```
+
+## 4rth error check: error visualization
+
+```{r fig.align="center", fig.width = 10}
+test$pred4_brand_name <- test_results_4rthmod
+
+plot4 <- test %>% 
+  ggplot(aes(x = age, y = salary)) +
+    geom_point(aes(color = (brand_name != pred4_brand_name))) +
+    labs(title = "SVM model error with only salary and age") +
+    scale_color_manual(values = c("white","red")) +
+    theme(legend.position="none")
+
+library(gridExtra)
+grid.arrange(plot3, plot4, nrow = 1)
+```
+
+## Extra: support lines plot for SVM
+
+```{r fig.align="center", fig.height=5}
+plot(mod_svm, data = test, salary ~ age)
+```
+
