@@ -2,11 +2,12 @@
 title: "Brand prediction"
 author: "Joan Claverol - Data mentor"
 date: "16 de marzo de 2019"
-output: 
+output:
+  beamer_presentation: default
   ioslides_presentation:
-    widescreen: true
-    css: JB_style.css 
-    smaller: true
+    css: JB_style.css
+    smaller: yes
+    widescreen: yes
 ---
 
 ```{r setup, include=FALSE, message=FALSE}

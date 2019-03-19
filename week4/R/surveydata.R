@@ -99,16 +99,21 @@ training <- surveyData[inTraining,]
 testing <- surveyData[-inTraining,]
 
 #10 fold cross validation
-fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE)
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 10, 
+                           repeats = 2, 
+                           sampling = "down", 
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary)
 
 #train Random Forest Regression model
-rfFit1 <- train(brand~salary + as.factor(Age_Level), #zipcode + car + elevel,
+rfFit1 <- train(brand~ salary + as.factor(Age_Level), #+ zipcode + car + elevel,
                 data = training,
                 method = "rf",
                 preProcess = c("center"),
                 trControl=fitControl,
                 metric = "Kappa",
-                tuneLength = 2)
+                tuneLength = 4)
 
 # Predicting testset ================================
 
