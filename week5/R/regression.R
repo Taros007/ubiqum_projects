@@ -1,11 +1,23 @@
 ## Multiple regression - week 5
 ## Toine - March 2019
 
+## Task list =====================================
+#Now NAs get deleted, limiting dataset. Test other measures
+#Check on collinearity
+#Outliers!!
+
 ## Load libraries =================================
 library(tidyverse)
 library(caret)
 library(e1071)
 library(magrittr)
+library(doParallel)
+library(corrplot)
+
+# Prepare clusters =================================
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
 
 ## Import dataset =================================
 #existingProducts <- readr::read_csv('./input/existingproductattributes2017.csv')
@@ -37,28 +49,40 @@ existingProducts %<>%
 newDataFrame <- dummyVars(" ~ .", data = existingProducts)
 existingDummy <- data.frame(predict(newDataFrame, newdata = existingProducts))
 
-## Missing data =================================
+## Data exploration ==========================================
 
-existingDummy <- na.omit(existingDummy)
+
+
+## Detect collinearity & correlation =========================
+
+corrData <- cor(existingDummy)
+corrplot(corrData)
 
 ## Feature selection =================================
 
 existingDummySelected <- select(existingDummy,
-                          -c(
-                             X5Stars, 
-                             X4Stars, 
-                             X3Stars, 
-                             X2Stars, 
-                             X1Stars, 
-                             Depth, 
-                             Weigth, 
-                             Width, 
-                             Heigth))
+                           -c(
+                             X5Stars,
+                             X4Stars,
+                             X3Stars,
+                             X2Stars,
+                             X1Stars,
+                             Product_ID,
+                             Depth,
+                             Weigth,
+                             Width,
+                             Heigth
+         #                    Best_seller_rank
+                            ))
+
+## Missing data =================================
+#after feature selection to retain as much data as possible
+existingDummySelected <- na.omit(existingDummySelected)
 
 ## Training of model =================================
 set.seed(998)
 # train and test
-train_ids <- createDataPartition(y = existingDummy$Volume,
+train_ids <- createDataPartition(y = existingDummySelected$Volume,
                                  p = 0.75,
                                  list = F)
 train <- existingDummySelected[train_ids,]
@@ -67,7 +91,7 @@ test <- existingDummySelected[-train_ids,]
 # cross validation
 ctrl <- trainControl(method = "repeatedcv",
                      number = 5,
-                     repeats = 5
+                     repeats = 3
                      )
 
 
@@ -75,7 +99,8 @@ ctrl <- trainControl(method = "repeatedcv",
 rfFit1 <- caret::train(Volume~. ,
                 data = train,
                 method = "rf",
-                trControl=ctrl
+                trControl=ctrl,
+                importance=T #added to allow for varImp()
                 )
 
 # Predicting testset ================================
@@ -88,3 +113,12 @@ postResample(predictions, test$Volume)
 #Check important variables
 varTun <- varImp(rfFit1)
 plot(varTun, main = "Top variance importance")
+
+# Closing actions ================================
+
+#Save predictions
+#write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
+#write.csv(surveyData, './output/SurveyData.csv')
+
+# Stop Cluster. 
+stopCluster(cl)                   
