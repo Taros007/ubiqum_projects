@@ -2,8 +2,7 @@
 ## Toine - March 2019
 
 ## Task list =====================================
-#Now NAs get deleted, limiting dataset. Test other measures
-#Check on collinearity
+#Now NAs get deleted, limiting dataset. Test other measures (knnimpute, bagimpute etc.)
 #Outliers!!
 
 ## Load libraries =================================
@@ -15,7 +14,6 @@ library(doParallel)
 library(corrplot)
 
 # Prepare clusters =================================
-library(doParallel)
 cl <- makeCluster(3)
 registerDoParallel(cl)
 
@@ -53,11 +51,6 @@ existingDummy <- data.frame(predict(newDataFrame, newdata = existingProducts))
 
 
 
-## Detect collinearity & correlation =========================
-
-corrData <- cor(existingDummy)
-corrplot(corrData)
-
 ## Feature selection =================================
 
 existingDummySelected <- select(existingDummy,
@@ -71,13 +64,21 @@ existingDummySelected <- select(existingDummy,
                              Depth,
                              Weigth,
                              Width,
-                             Heigth
-         #                    Best_seller_rank
+                             Heigth,
+                             Profit_margin,
+                             Prices
                             ))
 
 ## Missing data =================================
 #after feature selection to retain as much data as possible
 existingDummySelected <- na.omit(existingDummySelected)
+
+## Detect collinearity & correlation =========================
+
+corrData <- cor(existingDummySelected)
+corrplot(corrData, type = "upper", tl.pos = "td",
+         method = "circle", tl.cex = 0.5, tl.col = 'black',
+         diag = FALSE)
 
 ## Training of model =================================
 set.seed(998)
@@ -90,7 +91,7 @@ test <- existingDummySelected[-train_ids,]
 
 # cross validation
 ctrl <- trainControl(method = "repeatedcv",
-                     number = 5,
+                     number = 3,
                      repeats = 3
                      )
 
@@ -98,12 +99,14 @@ ctrl <- trainControl(method = "repeatedcv",
 #train Random Forest Regression model
 rfFit1 <- caret::train(Volume~. ,
                 data = train,
-                method = "rf",
+                method = "svmRadialCost",
                 trControl=ctrl,
                 importance=T #added to allow for varImp()
                 )
 
 # Predicting testset ================================
+
+
 
 #Predict
 predictions <- predict(rfFit1, test)
