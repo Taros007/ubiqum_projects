@@ -3,7 +3,6 @@
 
 ## Task list =====================================
 #Now NAs get deleted, limiting dataset. Test other measures (knnimpute, bagimpute etc.)
-#Outliers!!
 
 ## Load libraries =================================
 library(tidyverse)
@@ -12,6 +11,7 @@ library(e1071)
 library(magrittr)
 library(doParallel)
 library(corrplot)
+library(cowplot)
 
 # Prepare clusters =================================
 cl <- makeCluster(3)
@@ -43,16 +43,41 @@ existingProducts %<>%
     Review_index = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
     ) 
 
+## Data exploration ==========================================
+#plotting dependent variable
+#ggplot(existingProducts, aes(x = Product_type, y = Volume)) + geom_boxplot() + coord_flip()
+#plotting dependent variable vs most important independent variable (varImp)
+ggplot(existingProducts, aes(x = Positive_service_review, y = Volume)) + geom_point()
+
+## Outlier detection $ removal ===============================
+source('./R/outliers.R')
+
+#Detect outliers based on MAD
+is_no_outlier <- isnt_out_maha(existingProducts$Volume)
+
+# add a column with info whether the Volume is an outlier
+existingProducts$is_no_outlier <- is_no_outlier
+
+# look at the same plot as above, with and without outliers
+g_withoutliers <- ggplot(existingProducts, aes(Product_type, Volume)) +
+                    geom_boxplot() +
+                    coord_flip() +
+                    geom_boxplot()
+
+g_withoutoutliers <- ggplot(existingProducts[is_no_outlier == T,], aes(Product_type, Volume)) +
+                    geom_boxplot() +
+                    coord_flip() +
+                    geom_boxplot()
+
+plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Without outliers"))
+
+existingProducts <- filter(existingProducts, is_no_outlier == T)
+
 ## Dummify data =================================
 newDataFrame <- dummyVars(" ~ .", data = existingProducts)
 existingDummy <- data.frame(predict(newDataFrame, newdata = existingProducts))
 
-## Data exploration ==========================================
-
-
-
 ## Feature selection =================================
-
 existingDummySelected <- select(existingDummy,
                            -c(
                              X5Stars,
@@ -64,17 +89,14 @@ existingDummySelected <- select(existingDummy,
                              Depth,
                              Weigth,
                              Width,
-                             Heigth,
-                             Profit_margin,
-                             Prices
-                            ))
+                             Heigth
+                             ))
 
 ## Missing data =================================
 #after feature selection to retain as much data as possible
 existingDummySelected <- na.omit(existingDummySelected)
 
 ## Detect collinearity & correlation =========================
-
 corrData <- cor(existingDummySelected)
 corrplot(corrData, type = "upper", tl.pos = "td",
          method = "circle", tl.cex = 0.5, tl.col = 'black',
@@ -99,15 +121,12 @@ ctrl <- trainControl(method = "repeatedcv",
 #train Random Forest Regression model
 rfFit1 <- caret::train(Volume~. ,
                 data = train,
-                method = "svmRadialCost",
+                method = "rf",
                 trControl=ctrl,
                 importance=T #added to allow for varImp()
                 )
 
 # Predicting testset ================================
-
-
-
 #Predict
 predictions <- predict(rfFit1, test)
 

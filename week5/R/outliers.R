@@ -1,9 +1,7 @@
 library(dplyr)
 library(tidyr)
-library(ggplot2)
-library(ruler)
-
-diamonds <- diamonds
+#library(ggplot2)
+#library(ruler)
 
 # Detect based on Z-score
 isnt_out_z <- function(x, thres = 3, na.rm = TRUE) {
@@ -30,14 +28,6 @@ isnt_out_maha <- function(tbl, isnt_out_f, ...) {
   tbl %>% maha_dist() %>% isnt_out_f(...)
 }
 
-# Define non-outlier
-isnt_out_funs <- funs(
-  z = isnt_out_z,
-  mad = isnt_out_mad,
-  tukey = isnt_out_tukey
-)
-
-diamonds %>% transmute_if(is.numeric, isnt_out_funs)
 
 
 
