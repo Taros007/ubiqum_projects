@@ -1,9 +1,15 @@
-## Multiple regression - week 5
-## Toine - March 2019
+---
+title: "Week5"
+author: "Toine"
+date: "3/20/2019"
+output: html_document
+---
 
-## Task list =====================================
-#Now NAs get deleted, limiting dataset. Test other measures (knnimpute, bagimpute etc.)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
+```{r Load Libraries}
 ## Load libraries =================================
 library(tidyverse)
 library(caret)
@@ -12,16 +18,19 @@ library(magrittr)
 library(doParallel)
 library(corrplot)
 library(cowplot)
-
+```
+```{r Prepare clusters}
 # Prepare clusters =================================
 cl <- makeCluster(3)
 registerDoParallel(cl)
+```
 
+```{r Import and clean dataset}
 ## Import dataset =================================
 #existingProducts <- readr::read_csv('./input/existingproductattributes2017.csv')
 #newProducts <- readr::read_csv('./input/newproductattributes2017.csv')
 
-existingProducts <- readr::read_csv2('./input/existingChristianProud.csv')# newProducts <- readr::read_csv('./input/newproductChristianProud.csv')
+existingProducts <- readr::read_csv2('../input/existingChristianProud.csv')# newProducts <- readr::read_csv('./input/newproductChristianProud.csv')
 
 ## Preprocessing: cleaning up ==========================
 existingProducts %<>% select(-X1)
@@ -34,29 +43,15 @@ existingProducts %<>%
     Depth = as.numeric(Depth),
     Age = as.factor(Age),
     Review_index = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
-    )
-existingProducts %<>% filter(Volume>0)
+    ) 
+```
 
-## Data exploration ==========================================
-#plotting dependent variable
-ggplot(existingProducts, aes(x = Product_type, y = Volume)) + geom_boxplot() + coord_flip()
-
-#plotting all numeric variables
-existingProducts %>%
-  keep(is.numeric) %>% 
-  gather() %>% 
-  ggplot(aes(value)) +
-  facet_wrap(~ key, scales = "free") +
-  geom_histogram()
-
-#plotting dependent variable vs most important independent variable (varImp)
-ggplot(existingProducts, aes(x = Positive_service_review, y = Volume)) + geom_point()
-
+```{r Detect and remove outliers}
 ## Outlier detection $ removal ===============================
-source('./R/outliers.R')
+source('../R/outliers.R')
 
 #Detect outliers based on MAD
-is_no_outlier <- isnt_out_mad(existingProducts$Volume, thres = 50)
+is_no_outlier <- isnt_out_mad(existingProducts$Volume, thres = 30)
 # add a column with info whether the Volume is an outlier
 existingProducts$is_no_outlier <- is_no_outlier
 
@@ -75,16 +70,11 @@ plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Withou
 
 existingProducts <- filter(existingProducts, is_no_outlier == T)
 
-## Detect collinearity & correlation =========================
-corrData <- cor(existingProducts)
-corrplot(corrData, type = "upper", tl.pos = "td",
-         method = "circle", tl.cex = 0.5, tl.col = 'black',
-         diag = FALSE)
-
-## Bin Best_seller_rank, and convert NAs to 0 ================
-
+```
+```{r Bin Best_seller_rank}
 existingProducts$Best_seller_rank %<>% findInterval(c(-Inf, 50, 100, Inf)) %<>% replace_na(0) %<>% as.factor()
-
+```
+```{r Feature selection etc}
 ## Feature selection =================================
 existingSelected <- select(existingProducts,
                            -c(
@@ -110,21 +100,22 @@ existingDummy <- data.frame(predict(newDataFrame, newdata = existingProducts))
 ## Missing data =================================
 #after feature selection to retain as much data as possible
 existingDummy <- na.omit(existingDummy)
-
+```
+```{r Train & Predict}
 ## Training of model =================================
-set.seed(540)
+set.seed(998)
 # train and test
 train_ids <- createDataPartition(y = existingDummy$Volume,
                                  p = 0.75,
                                  list = F)
 train <- existingDummy[train_ids,]
 test <- existingDummy[-train_ids,]
-
 # cross validation
 ctrl <- trainControl(method = "repeatedcv",
                      number = 4,
                      repeats = 10
                      )
+
 
 #train Random Forest Regression model
 rfFit1 <- caret::train(Volume~. ,
@@ -133,24 +124,34 @@ rfFit1 <- caret::train(Volume~. ,
                 trControl=ctrl,
                 importance=T #added to allow for varImp()
                 )
-
 # Predicting testset ================================
+#Predict
 test$Predictions <- predict(rfFit1, test)
 postResample(test$Predictions, test$Volume)
 
 ggplot(test, aes(x = Volume, y = Predictions)) + 
         geom_point() + 
         geom_abline(intercept = 0, slope = 1)
+```
 
-#Check important variables
-varTun <- varImp(rfFit1)
-plot(varTun, main = "Top variance importance")
 
-# Closing actions ================================
 
-#Save predictions
-#write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
-#write.csv(surveyData, './output/SurveyData.csv')
+## R Markdown
 
-# Stop Cluster. 
-stopCluster(cl)                   
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -10,6 +10,7 @@ isnt_out_z <- function(x, thres = 3, na.rm = TRUE) {
 
 # Detect based on MAD score
 isnt_out_mad <- function(x, thres = 3, na.rm = TRUE) {
+  x <- scale(x, center = TRUE, scale = TRUE)
   abs(x - median(x, na.rm = na.rm)) <= thres * mad(x, na.rm = na.rm)
 }
 
