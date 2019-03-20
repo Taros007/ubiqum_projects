@@ -23,6 +23,9 @@ registerDoParallel(cl)
 
 existingProducts <- readr::read_csv2('./input/existingChristianProud.csv')# newProducts <- readr::read_csv('./input/newproductChristianProud.csv')
 
+#existingProducts <- read.csv('./input/existingChristianProud.csv',sep= ";") #Pericles
+
+
 ## Preprocessing: cleaning up ==========================
 existingProducts %<>% select(-X1)
 names(existingProducts) %<>% make.names(.)
@@ -37,9 +40,13 @@ existingProducts %<>%
     )
 existingProducts %<>% filter(Volume>0)
 
+
+
 ## Data exploration ==========================================
 #plotting dependent variable
-ggplot(existingProducts, aes(x = Product_type, y = Volume)) + geom_boxplot() + coord_flip()
+ggplot(existingProducts, aes(x = Product_type, y = Volume)) +
+  geom_boxplot() +
+  coord_flip()
 
 #plotting all numeric variables
 existingProducts %>%
@@ -75,15 +82,20 @@ plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Withou
 
 existingProducts <- filter(existingProducts, is_no_outlier == T)
 
+# existingProducts <- existingProducts[is_no_outlier,]
+
+
 ## Detect collinearity & correlation =========================
-corrData <- cor(existingProducts)
+corrData <- cor(existingProducts %>% select(-Age,-Product_type) %>% na.omit())
 corrplot(corrData, type = "upper", tl.pos = "td",
          method = "circle", tl.cex = 0.5, tl.col = 'black',
          diag = FALSE)
 
 ## Bin Best_seller_rank, and convert NAs to 0 ================
 
-existingProducts$Best_seller_rank %<>% findInterval(c(-Inf, 50, 100, Inf)) %<>% replace_na(0) %<>% as.factor()
+existingProducts$Best_seller_rank %<>% 
+  findInterval(c(-Inf, 50, 100, Inf)) %<>% 
+  replace_na(0) %<>% as.factor()
 
 ## Feature selection =================================
 existingSelected <- select(existingProducts,
@@ -102,6 +114,9 @@ existingSelected <- select(existingProducts,
                              Prices,
                              is_no_outlier
                              ))
+
+#existingSelected <- existingProducts %>% 
+ # select(X4Stars,X2Stars....) Pericles
 
 ## Dummify data =================================
 newDataFrame <- dummyVars(" ~ .", data = existingSelected)
