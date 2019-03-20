@@ -23,10 +23,13 @@ isnt_out_tukey <- function(x, k = 1.5, na.rm = TRUE) {
 
 
 # Detect based on Mahalanobis distance
-maha_dist <- . %>% select_if(is.numeric) %>%
-  mahalanobis(center = colMeans(.), cov = cov(.))
-isnt_out_maha <- function(tbl, isnt_out_f, ...) {
-  tbl %>% maha_dist() %>% isnt_out_f(...)
+isnt_out_maha <- function(df, thres = 12) {
+  
+  # Calculate Mahalanobis
+  m_dist <- df %>% select_if(is.numeric) %>% mahalanobis(center = colMeans(.), cov = cov(.)) %>% round(2)
+  
+  # Maha Outliers
+  m_dist <= thres
 }
 
 

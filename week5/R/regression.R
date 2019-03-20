@@ -36,10 +36,10 @@ existingProducts %<>%
     Product_type = as.factor(Product_type),
     Depth = as.numeric(Depth),
     Age = as.factor(Age),
-    Review_index = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
+    Professional = as.factor(Professional),
+    Review_score = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
     )
 existingProducts %<>% filter(Volume>0)
-
 
 
 ## Data exploration ==========================================
@@ -59,7 +59,7 @@ existingProducts %>%
 #plotting dependent variable vs most important independent variable (varImp)
 ggplot(existingProducts, aes(x = Positive_service_review, y = Volume)) + geom_point()
 
-## Outlier detection $ removal ===============================
+## Outlier detection & removal ===============================
 source('./R/outliers.R')
 
 #Detect outliers based on MAD
@@ -80,13 +80,10 @@ g_withoutoutliers <- ggplot(existingProducts[is_no_outlier == T,], aes(Product_t
 
 plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Without outliers"))
 
-existingProducts <- filter(existingProducts, is_no_outlier == T)
-
-# existingProducts <- existingProducts[is_no_outlier,]
-
+existingProducts <- existingProducts[is_no_outlier,]
 
 ## Detect collinearity & correlation =========================
-corrData <- cor(existingProducts %>% select(-Age,-Product_type) %>% na.omit())
+corrData <- cor(existingProducts %>% select(-Age,-Product_type, -Professional) %>% na.omit())
 corrplot(corrData, type = "upper", tl.pos = "td",
          method = "circle", tl.cex = 0.5, tl.col = 'black',
          diag = FALSE)
@@ -105,7 +102,7 @@ existingSelected <- select(existingProducts,
                              X3Stars,
                              # X2Stars,
                              X1Stars,
-                             Review_index,
+                             Review_score,
                              Product_ID,
                              Depth,
                              Weigth,
