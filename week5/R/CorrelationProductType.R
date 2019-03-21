@@ -43,8 +43,10 @@ existingProducts %>% filter(Product_type == Producttype) %>%
   mutate(rowname = reorder(rowname, Volume)) %>%
   ggplot(aes(rowname, Volume)) +
     geom_col(fill = "#1380A1") + 
+    coord_cartesian(xlim = c(-1, 1)) + 
     coord_flip() +
     labs(title = chart_title) +
       ylab("Correlation") +
-  theme(axis.title.y=element_blank()) +
-  geom_hline(aes(yintercept = 0), linetype="dotted")
+    theme(axis.title.y=element_blank()) +
+    geom_hline(aes(yintercept = 0), linetype="dotted")
+
