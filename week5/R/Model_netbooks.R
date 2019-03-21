@@ -19,7 +19,7 @@ registerDoParallel(cl)
 #newProducts <- readr::read_csv('./input/newproductattributes2017.csv')
 
 existingProducts <- readr::read_csv2('./input/existingChristianProud.csv')
-#
+newProducts <- readr::read_csv2('./input/newproductChristianProud.csv')
 
 ## Preprocessing: cleaning up ==========================
 existingProducts %<>% select(-X1)
@@ -33,7 +33,7 @@ existingProducts %<>%
     Age = as.factor(Age),
     Professional = as.factor(Professional),
     Review_score = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
-    )
+  )
 existingProducts %<>% filter(Volume>0)
 
 
@@ -64,14 +64,14 @@ existingProducts$is_no_outlier <- is_no_outlier
 
 # look at the same plot as above, with and without outliers
 g_withoutliers <- ggplot(existingProducts, aes(Product_type, Volume)) +
-                    geom_boxplot() +
-                    coord_flip() +
-                    geom_boxplot()
+  geom_boxplot() +
+  coord_flip() +
+  geom_boxplot()
 
 g_withoutoutliers <- ggplot(existingProducts[is_no_outlier == T,], aes(Product_type, Volume)) +
-                    geom_boxplot() +
-                    coord_flip() +
-                    geom_boxplot()
+  geom_boxplot() +
+  coord_flip() +
+  geom_boxplot()
 
 plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Without outliers"))
 
@@ -90,42 +90,30 @@ existingProducts$Best_seller_rank %<>%
   replace_na(0) %<>% as.factor()
 
 ## Feature selection =================================
-existingSelected <- select(existingProducts,
-                           -c(
-                             X5Stars,
-                             X4Stars,
-                             X3Stars,
-                             # X2Stars,
-                             # X1Stars,
-                             #Review_score,
-                             Positive_service_review,
-                             Product_ID,
-                             Depth,
-                             Weigth,
-                             Width,
-                             Heigth,
-                             Prices,
-                             is_no_outlier,
-                             Would_consumer_recomend__product,
-                             Age,
-                             Professional,
-                             Competitors
-                             ))
+# existingSelected <- select(existingProducts,
+#                            c(
+#                              Review_score,
+#                              Prices,
+#                              Competitors,
+#                              Positive_service_review,
+#                              Width,
+#                              Volume,
+#                              Product_type
+#                            ))
 
 #existingSelected <- existingProducts %>% 
- # select(X4Stars,X2Stars....) Pericles
+# select(X4Stars,X2Stars....) Pericles
 
 ## Dummify data =================================
-newDataFrame <- dummyVars(" ~ .", data = existingSelected)
-existingDummy <- data.frame(predict(newDataFrame, newdata = existingSelected))
+newDataFrame <- dummyVars(" ~ .", data = existingProducts)
+existingDummy <- data.frame(predict(newDataFrame, newdata = existingProducts))
 
 ## Missing data =================================
 #after feature selection to retain as much data as possible
 existingDummy <- na.omit(existingDummy)
 
 ## Training of model =================================
-for (n in 1) {
-set.seed(n)
+set.seed(541)
 # train and test
 train_ids <- createDataPartition(y = existingDummy$Volume,
                                  p = 0.75,
@@ -137,27 +125,34 @@ test <- existingDummy[-train_ids,]
 ctrl <- trainControl(method = "repeatedcv",
                      number = 4,
                      repeats = 10
-                     )
+)
 
 #train Random Forest Regression model
-rfFit1 <- caret::train(Volume~. ,
-                data = train,
-                method = "rf",
-                trControl=ctrl,
-                importance=T #added to allow for varImp()
-                )
+rfFit1 <- caret::train(Volume~ Review_score + 
+                         Negative_service_review +
+                         Positive_service_review +
+                         X4Stars +
+                         Profit_margin+
+                         Would_consumer_recomend__product,
+                       data = train,
+                       method = "rf",
+                       trControl=ctrl,
+                       importance=T #added to allow for varImp()
+)
 
 # Predicting testset ================================
 test$Predictions <- predict(rfFit1, test)
 postResample(test$Predictions, test$Volume)
 
-cat("Test", n, "results in", postResample(test$Predictions, test$Volume),"\n")}
+Filtered <- filter(test, Product_type.Netbook == 1)
+cat("Amount of Netbooks in testset is:", nrow(Filtered))
+postResample(Filtered$Predictions, Filtered$Volume)
 
 ggplot(test, aes(x = Volume, y = Predictions)) + 
-        geom_point() + 
-        geom_abline(intercept = 0, slope = 1)
+  geom_point() + 
+  geom_abline(intercept = 0, slope = 1)
 
-ggplot(filter(test, Product_type.Laptop == 1), aes(x = Volume, y = Predictions)) + 
+ggplot(filter(test, Product_type.Netbook == 1), aes(x = Volume, y = Predictions)) + 
   geom_point() + 
   geom_abline(intercept = 0, slope = 1)
 
@@ -166,9 +161,6 @@ varTun <- varImp(rfFit1)
 plot(varTun, main = "Top variance importance")
 
 # Closing actions ================================
-
-#Save model to avoid future retraining
-#saveRDS(rfFit1, './output/RF.rds')
 
 # Stop Cluster. 
 stopCluster(cl)                   

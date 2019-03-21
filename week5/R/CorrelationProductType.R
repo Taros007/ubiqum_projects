@@ -32,7 +32,7 @@ existingProducts <- select(existingProducts,-Product_ID)
 
 ## Find correlation for specific product type ==============================
 
-Producttype="Smartphone"
+Producttype="Netbook"
 
 chart_title <- paste("Correlation of variables with Volume for producttype: ", Producttype)
 
