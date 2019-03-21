@@ -1,13 +1,16 @@
 ## Multiple regression - week 5
 ## Toine - March 2019
 
+## Task list =====================================
+#Now NAs get deleted, limiting dataset. Test other measures (knnimpute, bagimpute etc.)
+
 ## Load libraries =================================
 library(tidyverse)
 library(caret)
 library(e1071)
 library(magrittr)
 library(doParallel)
-library(corrplot)
+library(corrr)
 library(cowplot)
 
 # Prepare clusters =================================
@@ -18,8 +21,10 @@ registerDoParallel(cl)
 #existingProducts <- readr::read_csv('./input/existingproductattributes2017.csv')
 #newProducts <- readr::read_csv('./input/newproductattributes2017.csv')
 
-existingProducts <- readr::read_csv2('./input/existingChristianProud.csv')
-newProducts <- readr::read_csv2('./input/newproductChristianProud.csv')
+existingProducts <- readr::read_csv2('./input/existingChristianProud.csv')# newProducts <- readr::read_csv('./input/newproductChristianProud.csv')
+
+#existingProducts <- read.csv('./input/existingChristianProud.csv',sep= ";") #Pericles
+
 
 ## Preprocessing: cleaning up ==========================
 existingProducts %<>% select(-X1)
@@ -78,11 +83,15 @@ plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Withou
 existingProducts <- existingProducts[is_no_outlier,]
 
 ## Detect collinearity & correlation =========================
-corrData <- cor(existingProducts %>% select(-Age,-Product_type, -Professional) %>% na.omit())
-corrplot(corrData, type = "upper", tl.pos = "td",
-         method = "circle", tl.cex = 0.5, tl.col = 'black',
-         diag = FALSE)
+rs <- existingProducts%>% keep(is.numeric) %>% 
+  correlate() 
 
+rs %>% rearrange() %>% shave()
+
+rs %>% focus(Volume:Review_score, mirror = TRUE) %>% 
+  network_plot()
+
+rs %>% rplot(., shape = 20, colors = c("red", "green"),print_cor = T, legend = TRUE)
 ## Bin Best_seller_rank, and convert NAs to 0 ================
 
 existingProducts$Best_seller_rank %<>% 
@@ -149,15 +158,15 @@ ggplot(test, aes(x = Volume, y = Predictions)) +
         geom_point() + 
         geom_abline(intercept = 0, slope = 1)
 
-ggplot(filter(test, Product_type.Laptop == 1), aes(x = Volume, y = Predictions)) + 
-  geom_point() + 
-  geom_abline(intercept = 0, slope = 1)
-
 #Check important variables
 varTun <- varImp(rfFit1)
 plot(varTun, main = "Top variance importance")
 
 # Closing actions ================================
+
+#Save predictions
+#write.csv(surveyIncom, './output/SurveyIncompletePredicted.csv')
+#write.csv(surveyData, './output/SurveyData.csv')
 
 # Stop Cluster. 
 stopCluster(cl)                   
