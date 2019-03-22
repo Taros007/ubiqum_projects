@@ -35,7 +35,7 @@ existingProducts %<>%
     Review_score = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
     )
 existingProducts %<>% filter(Volume>0)
-
+existingProducts %<>% filter(Product_type != "Extended Warranty")
 
 ## Data exploration ==========================================
 #plotting dependent variable
@@ -78,7 +78,7 @@ plot_grid(g_withoutliers, g_withoutoutliers, labels = c("With outliers", "Withou
 existingProducts <- existingProducts[is_no_outlier,]
 
 ## Detect collinearity & correlation =========================
-corrData <- cor(existingProducts %>% select(-Age,-Product_type, -Professional) %>% na.omit())
+corrData <- cor(existingProducts %>% select(-Age,-Product_type, -Professional, -is_no_outlier) %>% na.omit())
 corrplot(corrData, type = "upper", tl.pos = "td",
          method = "circle", tl.cex = 0.5, tl.col = 'black',
          diag = FALSE)
@@ -95,7 +95,7 @@ existingSelected <- select(existingProducts,
                              X5Stars,
                              X4Stars,
                              X3Stars,
-                             # X2Stars,
+                             X2Stars,
                              # X1Stars,
                              #Review_score,
                              Positive_service_review,
@@ -124,7 +124,7 @@ existingDummy <- data.frame(predict(newDataFrame, newdata = existingSelected))
 existingDummy <- na.omit(existingDummy)
 
 ## Training of model =================================
-for (n in 1) {
+for (n in 1:50) {
 set.seed(n)
 # train and test
 train_ids <- createDataPartition(y = existingDummy$Volume,
