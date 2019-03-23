@@ -115,7 +115,7 @@ existingDummy <- na.omit(existingDummy)
 ## Training of model =================================
 set.seed(541)
 # train and test
-train_ids <- createDataPartition(y = existingDummy$Volume,
+train_ids <- createDataPartition(y = existingDummy$Product_type.PC,
                                  p = 0.75,
                                  list = F)
 train <- existingDummy[train_ids,]
