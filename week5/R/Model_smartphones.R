@@ -35,7 +35,7 @@ existingProducts %<>%
     Review_score = (5 * X5Stars + 4 * X4Stars + 3 * X3Stars + 2 * X2Stars + X1Stars) / rowSums(select(existingProducts, X5Stars:X1Stars))
   )
 existingProducts %<>% filter(Volume>0)
-
+#existingProducts %<>% filter(Product_type != "Extended Warranty")
 
 ## Data exploration ==========================================
 #plotting dependent variable
@@ -115,7 +115,7 @@ existingDummy <- na.omit(existingDummy)
 ## Training of model =================================
 set.seed(541)
 # train and test
-train_ids <- createDataPartition(y = existingDummy$Volume,
+train_ids <- createDataPartition(y = existingDummy$Product_type.Smartphone,
                                  p = 0.75,
                                  list = F)
 train <- existingDummy[train_ids,]

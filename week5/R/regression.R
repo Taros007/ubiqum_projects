@@ -91,26 +91,26 @@ existingProducts$Best_seller_rank %<>%
 
 ## Feature selection =================================
 existingSelected <- select(existingProducts,
-                           -c(
-                             X5Stars,
-                             X4Stars,
-                             X3Stars,
-                             X2Stars,
-                             # X1Stars,
-                             #Review_score,
-                             Positive_service_review,
-                             Product_ID,
-                             Depth,
-                             Weigth,
-                             Width,
-                             Heigth,
-                             Prices,
-                             is_no_outlier,
-                             Would_consumer_recomend__product,
-                             Age,
-                             Professional,
-                             Competitors
-                             ))
+                            -c(
+#                              X5Stars,
+#                              #X4Stars,
+#                              X3Stars,
+#                              X2Stars,
+#                              # X1Stars,
+#                              Review_score,
+#                              Positive_service_review,
+                              Product_ID,
+#                              Depth,
+#                              Weigth,
+#                              Width,
+#                              Heigth,
+#                              Prices,
+                              is_no_outlier
+#                              Would_consumer_recomend__product,
+#                              Age,
+#                              Professional,
+#                              Competitors
+                              ))
 
 #existingSelected <- existingProducts %>% 
  # select(X4Stars,X2Stars....) Pericles
@@ -124,7 +124,7 @@ existingDummy <- data.frame(predict(newDataFrame, newdata = existingSelected))
 existingDummy <- na.omit(existingDummy)
 
 ## Training of model =================================
-for (n in 1:50) {
+for (n in 1) {
 set.seed(n)
 # train and test
 train_ids <- createDataPartition(y = existingDummy$Volume,
@@ -142,8 +142,9 @@ ctrl <- trainControl(method = "repeatedcv",
 #train Random Forest Regression model
 rfFit1 <- caret::train(Volume~. ,
                 data = train,
-                method = "rf",
+                method = "svmLinear",
                 trControl=ctrl,
+                preProcess = c("center", "scale"),
                 importance=T #added to allow for varImp()
                 )
 
@@ -168,7 +169,7 @@ plot(varTun, main = "Top variance importance")
 # Closing actions ================================
 
 #Save model to avoid future retraining
-#saveRDS(rfFit1, './output/RF.rds')
+saveRDS(rfFit1, './output/RF.rds')
 
 # Stop Cluster. 
 stopCluster(cl)                   
