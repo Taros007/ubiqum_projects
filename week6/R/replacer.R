@@ -15,7 +15,7 @@ laptops <- c(
 
 desktops <- c(
   "Lenovo Desktop Computer",
-  #"iMac",
+  "iMac",
   "HP Desktop",
   "ASUS Desktop",
   "Dell Desktop",

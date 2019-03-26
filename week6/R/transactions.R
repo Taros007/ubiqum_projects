@@ -5,14 +5,13 @@
 library(arulesViz)
 library(arules)
 
-
 # # Prepare clusters =================================
 # cl <- makeCluster(3)
 # registerDoParallel(cl)
 
 ## Import dataset =================================
 source('./R/replacer.R')
-elecTransactions <- read.transactions('./input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
+elecTransactions <- read.transactions('./input/replaced.csv', sep = ',', rm.duplicates = T, format = "basket")
 
 ## Explore dataset =================================
 length(elecTransactions) #provides total amount of observations
