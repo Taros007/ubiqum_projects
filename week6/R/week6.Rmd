@@ -1,0 +1,365 @@
+---
+title: "Ubiqum: week 6 - Market basket analysis"
+author: "Blackwell data department - Analyst: Toine"
+output:
+  html_document:
+    theme: flatly
+    highlight: haddock
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+---
+
+# Executive summary
+
+This memo explores the data provided by Electronidex in order to investigate whether it would be a good acquisition target for Blackwell. Below, the most important findings and recommendations are listed:
+
+### General recommendations
+
+* The amount of data covers only one month of transactions. Therefore, it is impossible to correct for seasonality. Moreover, the target company may have boosted the numbers (e.g. by having aggressive promotions, by delaying sales to clients to this month, etc.). We should request addition data to be made available to us.
+* The data does not contains actual sales volume figures. Hence, it is hard to compare their sales figures to ours. However, it is clear that the most sold products are both desktops and laptops, something which we are not strong in.
+
+### Observations from data
+
+* The target company is strong in selling desktops and laptops, with Apple being their most popular brand (the iMac is sold in ~25% of all transactions)
+* [comment on rules]
+* There are two quite distinct types of buyers. One group buys multiple desktops and laptops simultanously, while the other group buys only one type of machine. Unfortunately, it is impossible to see whether the latter group buys only one or many of these same type of machine. Assuming it's only one machine, this group is likely to be private individuals.
+* The other group buys multiple types of machines at the same time. However, further analysis learns that they quite often also buy MS Office Home and Student edition. As this version does not provide an adequate licence for companies, it is likely that the group exists of academic organisations and schools.
+
+### Conclusions
+
+Based on the provided data, and if the findings above are confirmed by additional data, the acquisition of Electronidex could be beneficial to us.
+
+* If further due diligence confirms that the month for which data has been provided is not unusual for the target company, we would acquire a monthly transaction volume of 9,800. Although our sales department did not provide a time window in which the historical transactions were recorded, it does seem a significant amount given the transactions that have been analysed before.
+* The portfolio of the target company is complementary to ours, as it's best selling products (laptops and desktops) are mediocre performers in our stores.
+
+# Methodology
+
+```{r Setup, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Load libraries =================================
+library(arulesViz)
+library(arules)
+library(tidyverse)
+
+## Prepare clusters =================================
+#cl <- makeCluster(3)
+#registerDoParallel(cl)
+```
+
+### Initial data exploration
+
+```{r Import initial dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Import dataset =================================
+elecTransactions <- read.transactions('../input/ElectronidexTransactions2017.csv', sep = ',', rm.duplicates = F, format = "basket")
+```
+
+Initial exploration of the data:
+```{r Data exploration, echo = F, message = FALSE, warning = FALSE}
+## Explore dataset =================================
+cat("The total amount of observations is:", length(elecTransactions)) #provides total amount of observations
+
+#Find out average number of different items in transaction
+cat("The average number of items in a transaction is:", mean(size(elecTransactions)))
+
+#size(elecTransactions) # provides vector with number of items per observation
+#LIST(elecTransactions) #Lists the transactions by conversion (LIST must be capitalized)
+#itemLabels(elecTransactions) # To see the item labels
+summary(elecTransactions)
+```
+
+Next, the top sellers of the target company:
+```{r Data visualization I, echo = F, message = FALSE, warning = FALSE}
+## Visualize dataset ===============================
+#Visualization of most commonly bought items
+# itemFrequencyPlot(elecTransactions, topN = "15",
+#                   type="absolute",
+#                   horiz = T,
+#                   main="Absolute Item Frequency Plot"
+#                   )
+
+#ggplot version
+elecTransactions %>% 
+  itemFrequency(type = "absolute") %>% 
+  sort(decreasing = T) %>%
+  head(n = 15) %>% 
+  as_tibble(pkgconfig::set_config("tibble::rownames" = "ProductType")) %>%
+  ggplot(aes(x = reorder(ProductType, value), y = value)) +
+    geom_bar(stat = "identity") +
+    geom_col(fill = "#1380A1") +
+    coord_flip() +
+    theme_light() +
+    theme(
+      axis.title = element_text(size = 18), 
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank()
+    ) +
+  labs(title = "Sales volume of bestsellers") +
+  geom_label(aes(x = ProductType, y = value, label = round(value, 0)),
+             hjust = 1, 
+             vjust = 0.5, 
+             colour = "white", 
+             fill = NA, 
+             label.size = NA, 
+             family="Helvetica", 
+             size = 3)
+```
+
+It is also interesting to see what people buy when only one item is bought in a transaction:
+```{r Data visualization II, echo = F, message = FALSE, warning = FALSE}
+#Find out most sold items in transactions with only one item
+oneItemSales <- subset(elecTransactions, size(elecTransactions) == 1)
+itemFrequencyPlot(oneItemSales, topN = "15",
+                  type="absolute",
+                  horiz = T,
+                  main="Absolute Item Frequency Plot"
+                  )
+#ggplot version
+oneItemSales %>% 
+  itemFrequency(type = "absolute") %>% 
+  sort(decreasing = T) %>%
+  head(n = 15) %>% 
+  as_tibble(pkgconfig::set_config("tibble::rownames" = "ProductType")) %>%
+  ggplot(aes(x = reorder(ProductType, value), y = value)) +
+    geom_bar(stat = "identity") +
+    geom_col(fill = "#1380A1") +
+    coord_flip() +
+    theme_light() +
+    theme(
+      axis.title = element_text(size = 18), 
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank()
+    ) +
+  labs(title = "Bestsellers in single item transactions") +
+  geom_label(aes(x = ProductType, y = value, label = round(value, 0)),
+             hjust = 1, 
+             vjust = 0.5, 
+             colour = "white", 
+             fill = NA, 
+             label.size = NA, 
+             family="Helvetica", 
+             size = 3)
+# #Visualization of sample of transactions
+# image(sample(elecTransactions, 200))
+```
+
+### Alteration of data
+
+<i>Type of clients</i>
+From an initial scan of the data, it became pretty clear that the client group is not homogenous. As one would except, some transactions concerned one type of desktop or laptop, and some complementary items (such as a keyboard or printer). In addition, there are transactions for only complementary items. However, a large amount of transactions included multiple desktops and laptops, indicating that it might concern a organisation instead of a private individual.
+
+To split the data, separate datasets have been created by using a corporate flag. If more than one type of desktop or laptop was purchased, the transaction was flagged as corporate.
+
+```{r Create category dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Create new dataset with categories instead of products ====================================
+cateTrans <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
+
+laptops <- c(
+  "LG Touchscreen Laptop",
+  "Acer Aspire",
+  "HP Laptop",
+  "ASUS Chromebook",
+  "Apple MacBook Pro",
+  "Apple MacBook Air",
+  "Dell Laptop",
+  "Eluktronics Pro Gaming Laptop",
+  "Alienware Laptop",
+  "HP Notebook Touchscreen Laptop PC"
+  )
+
+desktops <- c(
+  "Lenovo Desktop Computer",
+  "iMac",
+  "HP Desktop",
+  "ASUS Desktop",
+  "Dell Desktop",
+  "Intel Desktop",
+  "Acer Desktop",
+  "CYBERPOWER Gamer Desktop"
+  )
+
+monitors <- c(
+  "Acer Monitor",
+  "LG Monitor",
+  "ASUS Monitor",
+  "ASUS 2 Monitor",
+  "Dell Monitor",
+  "Samsung Monitor",
+  "Sceptre Monitor",
+  "ViewSonic Monitor",
+  "AOC Monitor",
+  "HP Monitor"
+  )
+
+iodevices <- c(
+  "3-Button Mouse",
+  "Logitech Wireless Mouse",
+  "Microsoft Basic Optical Mouse",
+  "Logitech 3-button Mouse",
+  "Redragon Gaming Mouse  ",
+  "HP Wireless Mouse",
+  "Generic Black 3-Button",
+  "Wireless Portable Mouse",
+  "Gaming Mouse Professional",
+  "Slim Wireless Mouse",
+  "HP USB Keyboard",
+  "Logitech Wireless Keyboard",
+  "Rii LED Keyboard",
+  "Logitech Keyboard",
+  "Backlit LED Gaming Keyboard",
+  "Dell Wired Keyboard",
+  "Apple Wired Keyboard",
+  "Apple Wireless Keyboard",
+  "Apple Magic Keyboard",
+  "Logitech MK550 Wireless Wave Keyboard and Mouse Combo",
+  "Logitech Desktop MK120 Mouse and keyboard Combo",
+  "Logitech MK270 Wireless Keyboard and Mouse Combo",
+  "Dell KM117 Wireless Keyboard & Mouse",
+  "EagleTec Wireless Combo Keyboard and Mouse",
+  "Microsoft Wireless Comfort Keyboard and Mouse",
+  "Microsoft Wireless Desktop Keyboard and Mouse",
+  "Rii LED Gaming Keyboard & Mouse Combo",
+  "Logitech MK360 Wireless Keyboard and Mouse Combo"
+)
+
+for (i in seq_along(laptops)){
+  cateTrans[cateTrans == laptops[i]] <- "Laptop"
+}
+
+for (i in seq_along(desktops)){
+  cateTrans[cateTrans == desktops[i]] <- "Desktop"
+}
+
+for (i in seq_along(monitors)){
+  cateTrans[cateTrans == monitors[i]] <- "Monitor"
+}
+
+for (i in seq_along(iodevices)){
+  cateTrans[cateTrans == iodevices[i]] <- "I/O-device"
+}
+
+readr::write_csv(cateTrans, '../input/replaced.csv', na="", col_names = F)
+```
+
+<i>Product categories</i>
+There are two levels on which the data can be analysed: product and producttype. The latter data has been created by using the product list for desktops, laptops, and I/O-devices (mouses and keyboards).
+
+```{r Create corporate flag variable, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Create category variable which shows whether transaction is corporate or not (with dataframe) #######
+df <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
+
+#Initialize category variable
+corporation <- logical(dim(df)[1])
+
+computers <- c(
+  "LG Touchscreen Laptop",
+  "Acer Aspire",
+  "HP Laptop",
+  "ASUS Chromebook",
+  "Apple MacBook Pro",
+  "Apple MacBook Air",
+  "Dell Laptop",
+  "Eluktronics Pro Gaming Laptop",
+  "Alienware Laptop",
+  "HP Notebook Touchscreen Laptop PC",
+  "Lenovo Desktop Computer",
+  "iMac",
+  "HP Desktop",
+  "ASUS Desktop",
+  "Dell Desktop",
+  "Intel Desktop",
+  "Acer Desktop",
+  "CYBERPOWER Gamer Desktop"
+)
+
+#Run in a loop over all transactions, and flag corporation TRUE if a transaction has >1 computer
+for (i in 1:length(corporation)) {
+  compcount <- 0
+  for (j in 1:length(df[i,])) {
+    if (df[i,j] %in% computers) {
+      compcount <- compcount + 1
+      if (compcount > 1) {
+        corporation[i] <- TRUE; break
+      }
+    }
+  }
+}
+
+#Code to screen for MS office in transaction  
+# if (elecTransactions[i]@data[97]) {
+#   category[i] <- "PrivateIndividual"    
+# }
+```
+
+
+
+
+```{r Import datasets, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Import dataset =================================
+elecTransactions <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
+#elecTransactions <- read.transactions('../input/ElectronidexTransactions2017.csv', sep = ',', rm.duplicates = F, format = "basket")
+```
+
+
+## Building of the model ====================================
+rules <- apriori(elecTransactions, 
+                 parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
+                )
+inspect(sort(rules, by = "lift"))
+plot(rules, method = "graph", shading = NA)
+
+## Digging into Laptops =====================================
+rules1 <- apriori(elecTransactions, 
+                 parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
+                 appearance = list(default="rhs", lhs="Laptop")
+                  )
+inspect(sort(rules1, by = "lift"))
+plot(rules1, method = "graph", shading = NA)
+
+## Digging into Desktops =====================================
+rules1 <- apriori(elecTransactions, 
+                  parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
+                  appearance = list(default="rhs", lhs="Desktop")
+)
+inspect(sort(rules1, by = "lift"))
+plot(rules1, method = "graph", shading = NA)
+
+## Digging into Monitors =====================================
+rules1 <- apriori(elecTransactions, 
+                  parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
+                  appearance = list(default="rhs", lhs="Laptop")
+)
+inspect(sort(rules1, by = "lift"))
+plot(rules1, method = "graph", shading = NA)
+
+
+## Split transaction data into corporation and private individuals
+elecTrans_corp<-elecTransactions[corporation]
+elecTrans_private<-elecTransactions[!corporation]
+
+rules <- apriori(elecTrans_corp, 
+                 parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
+                )
+inspect(sort(rules, by = "lift"))
+plot(rules, method = "graph", shading = NA)
+
+rules <- apriori(elecTrans_private, 
+                 parameter = list(support = 0.01, confidence = 0.5, minlen = 2)
+)
+inspect(sort(rules, by = "count"))
+plot(rules, method = "graph", shading = NA)
+
+
+Rules for determining whether a transaction what from a corporation or private individual:
+
+
+Given that both laptops and desktops can be considered the main products in a purchase, these are removed from the rhs side of rules.
+
+# Appendix for Ubiqum mentors: code
+
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+```

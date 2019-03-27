@@ -1,6 +1,29 @@
-## Market basket analysis - week 6
-## Toine - March 2019
+---
+title: "Ubiqum: week 6 - Market basket analysis"
+author: "Blackwell data department _ Toine"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
 
+# Executive summary
+
+This memo investigates whether Electronidex presents a good acquisition opportunity for Blackwell. To that end, it analyses the limited transaction data we have received from Electronidex as part of the due dilligence.
+
+The most important findings and recommendations:
+
+## General recommendations
+
+* The amount of data covers only one month of transactions. Therefore, it is impossible to correct for seasonality. Moreover, the target company may have boosted the numbers (e.g. by having aggressive promotions, by delaying sales to clients to this month, etc.). We should request addition data to be made available to us.
+* The data does not contains actual sales volume figures. Hence, it is hard to compare their sales figures to ours. However, it is clear that the most sold products are both desktops and laptops, something which we are not strong in.
+
+## Observations from data
+
+* 
+
+```{r Setup, results = "hide", message = FALSE, warning = FALSE}
 ## Load libraries =================================
 library(arulesViz)
 library(arules)
@@ -8,9 +31,13 @@ library(arules)
 ## Prepare clusters =================================
 #cl <- makeCluster(3)
 #registerDoParallel(cl)
+```
 
+# Methodology
+
+```{r Create corporate flag variable, results = "hide", message = FALSE, warning = FALSE}
 ## Create category variable which shows whether transaction is corporate or not (with dataframe) #######
-df <- readr::read_csv('./input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
+df <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
 
 #Initialize category variable
 corporation <- logical(dim(df)[1])
@@ -54,11 +81,104 @@ for (i in 1:length(corporation)) {
 #   category[i] <- "PrivateIndividual"    
 # }
 
-## Import dataset =================================
-source('./R/replacer.R')
-elecTransactions <- read.transactions('./input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
-#elecTransactions <- read.transactions('./input/ElectronidexTransactions2017.csv', sep = ',', rm.duplicates = F, format = "basket")
+## Create new dataset with categories instead of products ====================================
 
+cateTrans <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
+
+laptops <- c(
+  "LG Touchscreen Laptop",
+  "Acer Aspire",
+  "HP Laptop",
+  "ASUS Chromebook",
+  "Apple MacBook Pro",
+  "Apple MacBook Air",
+  "Dell Laptop",
+  "Eluktronics Pro Gaming Laptop",
+  "Alienware Laptop",
+  "HP Notebook Touchscreen Laptop PC"
+  )
+
+desktops <- c(
+  "Lenovo Desktop Computer",
+  "iMac",
+  "HP Desktop",
+  "ASUS Desktop",
+  "Dell Desktop",
+  "Intel Desktop",
+  "Acer Desktop",
+  "CYBERPOWER Gamer Desktop"
+  )
+
+monitors <- c(
+  "Acer Monitor",
+  "LG Monitor",
+  "ASUS Monitor",
+  "ASUS 2 Monitor",
+  "Dell Monitor",
+  "Samsung Monitor",
+  "Sceptre Monitor",
+  "ViewSonic Monitor",
+  "AOC Monitor",
+  "HP Monitor"
+  )
+
+iodevices <- c(
+  "3-Button Mouse",
+  "Logitech Wireless Mouse",
+  "Microsoft Basic Optical Mouse",
+  "Logitech 3-button Mouse",
+  "Redragon Gaming Mouse  ",
+  "HP Wireless Mouse",
+  "Generic Black 3-Button",
+  "Wireless Portable Mouse",
+  "Gaming Mouse Professional",
+  "Slim Wireless Mouse",
+  "HP USB Keyboard",
+  "Logitech Wireless Keyboard",
+  "Rii LED Keyboard",
+  "Logitech Keyboard",
+  "Backlit LED Gaming Keyboard",
+  "Dell Wired Keyboard",
+  "Apple Wired Keyboard",
+  "Apple Wireless Keyboard",
+  "Apple Magic Keyboard",
+  "Logitech MK550 Wireless Wave Keyboard and Mouse Combo",
+  "Logitech Desktop MK120 Mouse and keyboard Combo",
+  "Logitech MK270 Wireless Keyboard and Mouse Combo",
+  "Dell KM117 Wireless Keyboard & Mouse",
+  "EagleTec Wireless Combo Keyboard and Mouse",
+  "Microsoft Wireless Comfort Keyboard and Mouse",
+  "Microsoft Wireless Desktop Keyboard and Mouse",
+  "Rii LED Gaming Keyboard & Mouse Combo",
+  "Logitech MK360 Wireless Keyboard and Mouse Combo"
+)
+
+for (i in seq_along(laptops)){
+  cateTrans[cateTrans == laptops[i]] <- "Laptop"
+}
+
+for (i in seq_along(desktops)){
+  cateTrans[cateTrans == desktops[i]] <- "Desktop"
+}
+
+for (i in seq_along(monitors)){
+  cateTrans[cateTrans == monitors[i]] <- "Monitor"
+}
+
+for (i in seq_along(iodevices)){
+  cateTrans[cateTrans == iodevices[i]] <- "I/O-device"
+}
+
+readr::write_csv(df, '../input/replaced.csv', na="", col_names = F)
+
+## Import dataset =================================
+elecTransactions <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
+#elecTransactions <- read.transactions('../input/ElectronidexTransactions2017.csv', sep = ',', rm.duplicates = F, format = "basket")
+```
+
+This is a test
+
+```{r Data exploration, message = FALSE, warning = FALSE}
 ## Explore dataset =================================
 length(elecTransactions) #provides total amount of observations
 size(elecTransactions) # provides vector with number of items per observation
@@ -141,3 +261,9 @@ rules <- apriori(elecTrans_private,
 )
 inspect(sort(rules, by = "count"))
 plot(rules, method = "graph", shading = NA)
+```
+
+Rules for determining whether a transaction what from a corporation or private individual:
+
+
+Given that both laptops and desktops can be considered the main products in a purchase, these are removed from the rhs side of rules.
