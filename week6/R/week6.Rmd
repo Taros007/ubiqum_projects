@@ -31,6 +31,7 @@ This memo explores the data provided by Electronidex in order to investigate whe
 
 Based on the provided data, and if the findings above are confirmed by additional data, the acquisition of Electronidex could be beneficial to us.
 
+* There is reason for concern that we have only been provided with one month of data. It should be investigated whether this is due to internal problems at the target company.
 * If further due diligence confirms that the month for which data has been provided is not unusual for the target company, we would acquire a monthly transaction volume of 9,800. Although our sales department did not provide a time window in which the historical transactions were recorded, it does seem a significant amount given the transactions that have been analysed before.
 * The portfolio of the target company is complementary to ours, as it's best selling products (laptops and desktops) are mediocre performers in our stores.
 
@@ -150,194 +151,11 @@ oneItemSales %>%
 ### Alteration of data
 
 <i>Type of clients</i>
-From an initial scan of the data, it became pretty clear that the client group is not homogenous. As one would except, some transactions concerned one type of desktop or laptop, and some complementary items (such as a keyboard or printer). In addition, there are transactions for only complementary items. However, a large amount of transactions included multiple desktops and laptops, indicating that it might concern a organisation instead of a private individual.
+From an initial scan of the data, it soon became pretty clear that the client group is not homogenous. One would except transactions that include one type of desktop or laptop, and some complementary items (such as a keyboard or printer). In addition, there are transactions for only complementary items. However, a large amount of transactions include multiple desktops and laptops, indicating that the buyer might be a organisation instead of a private individual.
 
-To split the data, separate datasets have been created by using a corporate flag. If more than one type of desktop or laptop was purchased, the transaction was flagged as corporate.
-
-```{r Create category dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
-## Create new dataset with categories instead of products ====================================
-cateTrans <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
-
-laptops <- c(
-  "LG Touchscreen Laptop",
-  "Acer Aspire",
-  "HP Laptop",
-  "ASUS Chromebook",
-  "Apple MacBook Pro",
-  "Apple MacBook Air",
-  "Dell Laptop",
-  "Eluktronics Pro Gaming Laptop",
-  "Alienware Laptop",
-  "HP Notebook Touchscreen Laptop PC"
-  )
-desktops <- c(
-  "Lenovo Desktop Computer",
-  "iMac",
-  "HP Desktop",
-  "ASUS Desktop",
-  "Dell Desktop",
-  "Intel Desktop",
-  "Acer Desktop",
-  "CYBERPOWER Gamer Desktop"
-  )
-monitors <- c(
-  "Acer Monitor",
-  "LG Monitor",
-  "ASUS Monitor",
-  "ASUS 2 Monitor",
-  "Dell Monitor",
-  "Samsung Monitor",
-  "Sceptre Monitor",
-  "ViewSonic Monitor",
-  "AOC Monitor",
-  "HP Monitor"
-  )
-iodevices <- c(
-  "3-Button Mouse",
-  "Logitech Wireless Mouse",
-  "Microsoft Basic Optical Mouse",
-  "Logitech 3-button Mouse",
-  "Redragon Gaming Mouse  ",
-  "HP Wireless Mouse",
-  "Generic Black 3-Button",
-  "Wireless Portable Mouse",
-  "Gaming Mouse Professional",
-  "Slim Wireless Mouse",
-  "HP USB Keyboard",
-  "Logitech Wireless Keyboard",
-  "Rii LED Keyboard",
-  "Logitech Keyboard",
-  "Backlit LED Gaming Keyboard",
-  "Dell Wired Keyboard",
-  "Apple Wired Keyboard",
-  "Apple Wireless Keyboard",
-  "Apple Magic Keyboard",
-  "Logitech MK550 Wireless Wave Keyboard and Mouse Combo",
-  "Logitech Desktop MK120 Mouse and keyboard Combo",
-  "Logitech MK270 Wireless Keyboard and Mouse Combo",
-  "Dell KM117 Wireless Keyboard & Mouse",
-  "EagleTec Wireless Combo Keyboard and Mouse",
-  "Microsoft Wireless Comfort Keyboard and Mouse",
-  "Microsoft Wireless Desktop Keyboard and Mouse",
-  "Rii LED Gaming Keyboard & Mouse Combo",
-  "Logitech MK360 Wireless Keyboard and Mouse Combo"
-)
-headphones <- c(
-  "Zombie Gaming Headset",
-  "Logitech ClearChat Headset",
-  "Panasonic On-Ear Stereo Headphones RP-HT21",
-  "PC Gaming Headset",
-  "Kensington Headphones",
-  "Logitech Stereo Headset",
-  "Koss Home Headphones",
-  "Microsoft Headset",
-  "Ailihen Stereo Headphones",
-  "XIBERIA Gaming Headset",
-  "Active Headphones",
-  "Apple Earpods",
-  "Monster Beats By Dr Dre"
-)
-activeheadphones <- c(
-  "Apple Earpods",
-  "Monster Beats by Dre",
-  "Otium Wireless Sports Bluetooth Headphones",
-  "Panasonic In-Ear Headphone",
-  "APIE Bluetooth Headphones",
-  "Philips Flexible Earhook Headphones"
-)
-cables <- c(
-  "HDMI Cable 6ft",
-  "Ethernet Cable",
-  "Etekcity Power Extension Cord Cable",
-  "Audio Cable",
-  "VGA Monitor Cable",
-  "iPhone Charger Cable",
-  "HDMI Adapter",
-  "USB Cable",
-  "Samsung Charging Cable"
-)
-other <- c(
-  "Microsoft Office Home and Student 2016",
-  "Computer Game",
-  "Belkin Mouse Pad",
-  "Large Mouse Pad"
-)
-speakers <- c(
-  "Cambridge Bluetooth Speaker",
-  "JBL Splashproof Portable Bluetooth Speaker",
-  "DOSS Touch Wireless Bluetooth",
-  "Logitech Multimedia Speakers",
-  "Rokono Mini Speaker",
-  "Cyber Acoustics",
-  "Bose Companion Speakers",
-  "Mackie CR speakers",
-  "Sonos"
-)
-printer <- c(
-  "Epson Printer",
-  "HP Wireless Printer",
-  "Canon Office Printer",
-  "Brother Printer",
-  "DYMO Label Manker",
-  "Epson Black  Ink",
-  "HP Black & Tri-color Ink",
-  "Canon Ink",
-  "Brother Printer Toner",
-  "DYMO Labeling Tape"
-)
-stands <- c(
-  "Halter Acrylic Monitor Stand",
-  "Height-Adjustable Standing Desk",
-  "Multi Media Stand",
-  "Halter Mesh Metal Monitor Stand",
-  "Full Motion Monitor Mount"
-)
-tablets <- c(
-  "iPad",
-  "iPad Pro",
-  "Fire HD Tablet",
-  "Samsung Galaxy Tab",
-  "Kindle"
-)
-harddrives <- c(
-  "1TB Portable External Hard Drive",
-  "2TB Portable External Hard Drive",
-  "5TB Desktop Hard Drive",
-  "Slim 2TB Portable External Hard Drive",
-  "3TB Portable External Hard Drive"
-)
-smarthome <- c(
-  "Apple TV",
-  "Google Home",
-  "Smart Light Bulb",
-  "Fire TV Stick",
-  "Roku Express"
-)
-
-for (i in seq_along(laptops)){
-  cateTrans[cateTrans == laptops[i]] <- "Laptop"
-}
-
-for (i in seq_along(desktops)){
-  cateTrans[cateTrans == desktops[i]] <- "Desktop"
-}
-
-for (i in seq_along(monitors)){
-  cateTrans[cateTrans == monitors[i]] <- "Monitor"
-}
-
-for (i in seq_along(iodevices)){
-  cateTrans[cateTrans == iodevices[i]] <- "I/O-device"
-}
-
-readr::write_csv(cateTrans, '../input/replaced.csv', na="", col_names = F)
-```
-
-<i>Product categories</i>
-There are two levels on which the data can be analysed: product and producttype. The latter data has been created by using the product list for desktops, laptops, and I/O-devices (mouses and keyboards).
+To split the data, separate datasets have been created using a corporate flag. If more than one type of desktop or laptop was purchased, the transaction was flagged as corporate.
 
 ```{r Create corporate flag variable, echo = F, results = "hide", message = FALSE, warning = FALSE}
-## Create category variable which shows whether transaction is corporate or not (with dataframe) #######
 df <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
 
 #Initialize category variable
@@ -377,29 +195,347 @@ for (i in 1:length(corporation)) {
   }
 }
 
+#Clean up df
+remove(df, i, j, compcount, computers)
+
+#Plot division between corp and private
+  
+division <- tribble(~whatever, ~buyertype, ~amount,
+                    "whatever", "corporate", length(corporation[corporation == TRUE]),
+                    "whatever",  "private individual", length(corporation[corporation == FALSE]))
+
+division %>%
+  ggplot(aes(x = whatever, y = amount, fill = buyertype)) +
+    geom_col(position = "fill", width = 0.2) +
+    scale_fill_brewer(palette = "Set2") +
+    theme_minimal(base_size = 16) +
+    theme(axis.title.y=element_blank(),
+          axis.text.y.left = element_blank()) +
+    ylab("% of total transactions") +
+    xlab(NULL) +
+    coord_flip() 
+    
+
+
 #Code to screen for MS office in transaction  
 # if (elecTransactions[i]@data[97]) {
 #   category[i] <- "PrivateIndividual"    
 # }
 ```
 
+<i>Product categories</i>
+There are two levels on which the data can be analysed: product and producttype. The latter data has been 
 
+```{r Create category dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Create new dataset with categories instead of products ====================================
+cateTrans <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
 
+laptops <- c(
+  "LG Touchscreen Laptop",
+  "Acer Aspire",
+  "HP Laptop",
+  "ASUS Chromebook",
+  "Apple MacBook Pro",
+  "Apple MacBook Air",
+  "Dell Laptop",
+  "Eluktronics Pro Gaming Laptop",
+  "Alienware Laptop",
+  "HP Notebook Touchscreen Laptop PC"
+  )
+desktops <- c(
+  "Lenovo Desktop Computer",
+  "iMac",
+  "HP Desktop",
+  "ASUS Desktop",
+  "Dell Desktop",
+  "Intel Desktop",
+  "Acer Desktop",
+  "CYBERPOWER Gamer Desktop",
+  "Dell 2 Desktop"
+  )
+monitors <- c(
+  "Acer Monitor",
+  "LG Monitor",
+  "ASUS Monitor",
+  "ASUS 2 Monitor",
+  "Dell Monitor",
+  "Samsung Monitor",
+  "Sceptre Monitor",
+  "ViewSonic Monitor",
+  "AOC Monitor",
+  "HP Monitor"
+  )
+iodevices <- c(
+  "3-Button Mouse",
+  "Logitech Wireless Mouse",
+  "Microsoft Basic Optical Mouse",
+  "Logitech 3-button Mouse",
+  "Redragon Gaming Mouse",
+  "HP Wireless Mouse",
+  "Generic Black 3-Button",
+  "Wireless Portable Mouse",
+  "Gaming Mouse Professional",
+  "Slim Wireless Mouse",
+  "HP USB Keyboard",
+  "Logitech Wireless Keyboard",
+  "Rii LED Keyboard",
+  "Logitech Keyboard",
+  "Backlit LED Gaming Keyboard",
+  "Dell Wired Keyboard",
+  "Apple Wired Keyboard",
+  "Apple Wireless Keyboard",
+  "Apple Magic Keyboard",
+  "Logitech MK550 Wireless Wave Keyboard and Mouse Combo",
+  "Logitech Desktop MK120 Mouse and keyboard Combo",
+  "Logitech MK270 Wireless Keyboard and Mouse Combo",
+  "Dell KM117 Wireless Keyboard & Mouse",
+  "EagleTec Wireless Combo Keyboard and Mouse",
+  "Microsoft Wireless Comfort Keyboard and Mouse",
+  "Microsoft Wireless Desktop Keyboard and Mouse",
+  "Rii LED Gaming Keyboard & Mouse Combo",
+  "Logitech MK360 Wireless Keyboard and Mouse Combo"
+)
+
+headphones <- c(
+  "Zombie Gaming Headset",
+  "Logitech ClearChat Headset",
+  "Panasonic On-Ear Stereo Headphones",
+  "PC Gaming Headset",
+  "Kensington Headphones",
+  "Logitech Stereo Headset",
+  "Koss Home Headphones",
+  "Microsoft Headset",
+  "Ailihen Stereo Headphones",
+  "XIBERIA Gaming Headset",
+  "Active Headphones",
+  "Apple Earpods",
+  "Monster Beats By Dr Dre"
+)
+activeheadphones <- c(
+  "Apple Earpods",
+  "Monster Beats by Dre",
+  "Otium Wireless Sports Bluetooth Headphone",
+  "Panasonic In-Ear Headphone",
+  "APIE Bluetooth Headphone",
+  "Philips Flexible Earhook Headphone"
+)
+cables <- c(
+  "HDMI Cable 6ft",
+  "Ethernet Cable",
+  "Etekcity Power Extension Cord Cable",
+  "Audio Cable",
+  "VGA Monitor Cable",
+  "iPhone Charger Cable",
+  "HDMI Adapter",
+  "USB Cable",
+  "Samsung Charging Cable"
+)
+other <- c(
+  "Microsoft Office Home and Student 2016",
+  "Computer Game",
+  "Belkin Mouse Pad",
+  "Large Mouse Pad"
+)
+speakers <- c(
+  "Cambridge Bluetooth Speaker",
+  "JBL Splashproof Portable Bluetooth Speaker",
+  "DOSS Touch Wireless Bluetooth",
+  "Logitech Multimedia Speakers",
+  "Rokono Mini Speaker",
+  "Cyber Acoustics",
+  "Bose Companion Speakers",
+  "Mackie CR Speakers",
+  "Sonos"
+)
+printer <- c(
+  "Epson Printer",
+  "HP Wireless Printer",
+  "Canon Office Printer",
+  "Brother Printer",
+  "DYMO Label Manker",
+  "Epson Black Ink",
+  "HP Black & Tri-color Ink",
+  "Canon Ink",
+  "Brother Printer Toner",
+  "DYMO Labeling Tape"
+)
+stands <- c(
+  "Halter Acrylic Monitor Stand",
+  "Height-Adjustable Standing Desk",
+  "Multi Media Stand",
+  "Halter Mesh Metal Monitor Stand",
+  "Full Motion Monitor Mount"
+)
+tablets <- c(
+  "iPad",
+  "iPad Pro",
+  "Fire HD Tablet",
+  "Samsung Galaxy Tablet",
+  "Kindle"
+)
+harddrives <- c(
+  "1TB Portable External Hard Drive",
+  "2TB Portable External Hard Drive",
+  "5TB Desktop Hard Drive",
+  "Slim 2TB Portable External Hard Drive",
+  "3TB Portable External Hard Drive"
+)
+smarthome <- c(
+  "Apple TV",
+  "Google Home",
+  "Smart Light Bulb",
+  "Fire TV Stick",
+  "Roku Express"
+)
+
+for (i in seq_along(laptops)){
+  cateTrans[cateTrans == laptops[i]] <- "Laptop"
+}
+
+for (i in seq_along(desktops)){
+  cateTrans[cateTrans == desktops[i]] <- "Desktop"
+}
+
+for (i in seq_along(monitors)){
+  cateTrans[cateTrans == monitors[i]] <- "Monitor"
+}
+
+for (i in seq_along(iodevices)){
+  cateTrans[cateTrans == iodevices[i]] <- "IO device"
+}
+
+for (i in seq_along(headphones)){
+  cateTrans[cateTrans == headphones[i]] <- "Headphones"
+}
+
+for (i in seq_along(activeheadphones)){
+  cateTrans[cateTrans == activeheadphones[i]] <- "Active headphones"
+}
+
+for (i in seq_along(cables)){
+  cateTrans[cateTrans == cables[i]] <- "Cables"
+}
+
+for (i in seq_along(other)){
+  cateTrans[cateTrans == other[i]] <- "Other"
+}
+
+for (i in seq_along(speakers)){
+  cateTrans[cateTrans == speakers[i]] <- "Speakers"
+}
+
+for (i in seq_along(printer)){
+  cateTrans[cateTrans == printer[i]] <- "Printer"
+}
+
+for (i in seq_along(stands)){
+  cateTrans[cateTrans == stands[i]] <- "Stands"
+}
+
+for (i in seq_along(tablets)){
+  cateTrans[cateTrans == tablets[i]] <- "Tablets"
+}
+
+for (i in seq_along(harddrives)){
+  cateTrans[cateTrans == harddrives[i]] <- "Harddrives"
+}
+
+for (i in seq_along(smarthome)){
+  cateTrans[cateTrans == smarthome[i]] <- "Smart Home devices"
+}
+
+#Write data frame to HDD
+readr::write_csv(cateTrans, '../input/replaced.csv', na="", col_names = F)
+
+#Load product category file as transaction file
+cateTrans <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
+
+#Plot product categories
+
+cateTrans %>% 
+  itemFrequency(type = "absolute") %>% 
+  sort(decreasing = T) %>%
+  head(n = 15) %>% 
+  as_tibble(pkgconfig::set_config("tibble::rownames" = "ProductType")) %>%
+  ggplot(aes(x = reorder(ProductType, value), y = value)) +
+    geom_bar(stat = "identity") +
+    geom_col(fill = "#1380A1") +
+    coord_flip() +
+    theme_light() +
+    theme(
+      axis.title = element_text(size = 18), 
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank()
+    ) +
+  labs(title = "Sales volume per product category") +
+  geom_label(aes(x = ProductType, y = value, label = round(value, 0)),
+             hjust = 1, 
+             vjust = 0.5, 
+             colour = "white", 
+             fill = NA, 
+             label.size = NA, 
+             family="Helvetica", 
+             size = 3)
+
+#Clean up variables
+remove(activeheadphones, cables, computers, desktops, harddrives, headphones, iodevices, laptops, monitors, other, printer, speakers, stands, tablets, smarthome, i)
+
+```
+
+```{r Product categories for Blackwell, echo = F, results = "hide", message = FALSE, warning = FALSE}
+blackwell <- read_csv('../input/20190326Blackwellproducts.csv')
+
+blackwell %>% 
+  group_by(ProductType) %>% 
+  summarize(n=sum(Volume)) %>%
+  ggplot(n, mapping=aes(x = reorder(ProductType, n), y = n)) + 
+    geom_bar(stat = "identity") +
+    geom_col(fill = "#1380A1") +
+    coord_flip() +
+    theme_light() +
+    theme(
+      axis.title = element_text(size = 18), 
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank()
+    ) +
+  labs(title = "Sales volume per product category") +
+  geom_label(aes(x = ProductType, y = n, label = round(n, 0)),
+             hjust = 1, 
+             vjust = 0.5, 
+             colour = "white", 
+             fill = NA, 
+             label.size = NA, 
+             family="Helvetica", 
+             size = 3)
+```
 
 ```{r Import datasets, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Import dataset =================================
-elecTransactions <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
-#elecTransactions <- read.transactions('../input/ElectronidexTransactions2017.csv', sep = ',', rm.duplicates = F, format = "basket")
+elecCategory <- read.transactions('../input/replaced.csv', sep = ',',rm.duplicates = F, format = "basket")
+```
+### Rule creation
+
+The first dataset to explore is the data as provided. Requiring a minimum length of 2 products to avoid single item rules, as well as a confidence of at least 50% and a very low support of 1%. 
+
+```{r Building model on original data, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Building of the model ====================================
+
+rules <- apriori(elecTransactions, 
+                 parameter = list(support = 0.01, confidence = 0.2, minlen = 1, maxlen = 2)
+                 )
+
+head(inspect(sort(rules, by = "lift")), 5)
+#arulesViz::ruleExplorer(rules)
+#plot(rules, method = "graph", shading = NA)
 ```
 
+However, given that both laptops and desktops can be considered the main products in a purchase, these are removed from the rhs side of rules.
 
-## Building of the model ====================================
-rules <- apriori(elecTransactions, 
-                 parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
-                )
-inspect(sort(rules, by = "lift"))
-plot(rules, method = "graph", shading = NA)
-
+```{r Building model with categories, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Laptops =====================================
 rules1 <- apriori(elecTransactions, 
                  parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
@@ -407,7 +543,9 @@ rules1 <- apriori(elecTransactions,
                   )
 inspect(sort(rules1, by = "lift"))
 plot(rules1, method = "graph", shading = NA)
+```
 
+```{r Building model corporates, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Desktops =====================================
 rules1 <- apriori(elecTransactions, 
                   parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
@@ -415,7 +553,9 @@ rules1 <- apriori(elecTransactions,
 )
 inspect(sort(rules1, by = "lift"))
 plot(rules1, method = "graph", shading = NA)
+```
 
+```{r Building model private individuals, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Monitors =====================================
 rules1 <- apriori(elecTransactions, 
                   parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
@@ -440,12 +580,11 @@ rules <- apriori(elecTrans_private,
 )
 inspect(sort(rules, by = "count"))
 plot(rules, method = "graph", shading = NA)
-
+```
 
 Rules for determining whether a transaction what from a corporation or private individual:
 
 
-Given that both laptops and desktops can be considered the main products in a purchase, these are removed from the rhs side of rules.
 
 # Appendix for Ubiqum mentors: code
 
