@@ -22,15 +22,17 @@ This memo explores the data provided by Electronidex in order to investigate whe
 
 ### Observations from data
 
-* The target company is strong in selling desktops and laptops, with Apple being their most popular brand (the iMac is sold in ~25% of all transactions)
-* [comment on rules]
+* The target company is strong in selling desktops and laptops, with Apple being their most popular brand (the iMac is sold in ~25% of all transactions). Regardless of whether we acquire the target company, it is interesting to investigate Apple products further if we don't carry them yet (I'm only aware of the iPhone being sold in our stores).
 * There are two quite distinct types of buyers. One group buys multiple desktops and laptops simultanously, while the other group buys only one type of machine. Unfortunately, it is impossible to see whether the latter group buys only one or many of these same type of machine. Assuming it's only one machine, this group is likely to be private individuals.
 * The other group buys multiple types of machines at the same time. However, further analysis learns that they quite often also buy MS Office Home and Student edition. As this version does not provide an adequate licence for companies, it is likely that the group exists of academic organisations and schools.
+* Monitors are the most important accessoire to be sold with laptops and desktops. Especially the SonicView monitor seems to be doing really well.
+* It is noteworthy that despite the iMac being the best selling product, that the Apple accessoires don't seem to do very well. This is an interesting opportunity to explore further.
 
 ### Conclusions
 
 Based on the provided data, and if the findings above are confirmed by additional data, the acquisition of Electronidex could be beneficial to us.
 
+* Electronidex has an established online store. Since we have only been selling online recently, this acquisition could help us with a good market position in one go.
 * There is reason for concern that we have only been provided with one month of data. It should be investigated whether this is due to internal problems at the target company.
 * If further due diligence confirms that the month for which data has been provided is not unusual for the target company, we would acquire a monthly transaction volume of 9,800. Although our sales department did not provide a time window in which the historical transactions were recorded, it does seem a significant amount given the transactions that have been analysed before.
 * The portfolio of the target company is complementary to ours, as it's best selling products (laptops and desktops) are mediocre performers in our stores.
@@ -42,13 +44,14 @@ Based on the provided data, and if the findings above are confirmed by additiona
 library(arulesViz)
 library(arules)
 library(tidyverse)
+library(magrittr)
 
 ## Prepare clusters =================================
 #cl <- makeCluster(3)
 #registerDoParallel(cl)
 ```
 
-### Initial data exploration
+## Initial data exploration
 
 ```{r Import initial dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Import dataset =================================
@@ -152,7 +155,7 @@ remove(oneItemSales)
 # image(sample(elecTransactions, 200))
 ```
 
-### Alteration of data
+## Alteration of data
 
 <i>Type of clients</i>
 From an initial scan of the data, it soon became pretty clear that the client group is not homogenous. One would except transactions that include one type of desktop or laptop, and some complementary items (such as a keyboard or printer). In addition, there are transactions for only complementary items. However, a large amount of transactions include multiple desktops and laptops, indicating that the buyer might be a organisation instead of a private individual.
@@ -226,12 +229,12 @@ division %>%
 ```
 
 <i>Product categories</i>
-There are two levels on which the data can be analysed: product and producttype. The latter data has been 
+In addition to analysing on a product level, it is also useful to look at a product type level. The chart below shows that the target company is strong in the Desktop, and Laptop divisions. These are both categories that are weak performers within our company. If compared to the Blackwell product types that do well (see chart below), it is really interesting to see that our bestseller, game consoles, are not even being offered by Electronidex.
 
-```{r Create category dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
+```{r Create category datasets, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Create new dataset with categories instead of products ====================================
 
-#Start of with functions for desktops and laptops, as this is used later on for analysis of corporates and private individuals as well
+#Separate function for desktops and laptops. Now no longer needed, but was used earlier multiple times.
 
 DeskLap <- function(df) {
   laptops <- c(
@@ -265,6 +268,7 @@ DeskLap <- function(df) {
   for (i in seq_along(desktops)){
     df[df == desktops[i]] <- "Desktop"
   }
+  df
 }
 
 #The rest is done without a function:
@@ -405,11 +409,17 @@ smarthome <- c(
   "Roku Express"
 )
 
-cateTrans %>% DeskLap()
+cateTrans %<>% DeskLap()
 
-##Create data with only laptops and desktops transformed
+##Create datasets with only laptops and desktops transformed
 #Write data frame to HDD
 readr::write_csv(cateTrans, '../input/replaced1.csv', na="", col_names = F)
+
+#Create datasets DeskLap for corporate and private individuals
+elecCorp <- cateTrans[corporation == T,]
+readr::write_csv(elecCorp, '../input/elecCorp.csv', na="", col_names = F)
+elecPriv <- cateTrans[corporation == F,]
+readr::write_csv(elecPriv, '../input/elecPriv.csv', na="", col_names = F)
 
 #Load product category file as transaction file
 elecDeskLap <- read.transactions('../input/replaced1.csv', sep = ',', rm.duplicates = F, format = "basket")
@@ -499,11 +509,12 @@ elecCategory %>%
              size = 3)
 
 #Clean up variables
-remove(activeheadphones, cables, computers, desktops, harddrives, headphones, iodevices, laptops, monitors, other, printer, speakers, stands, tablets, smarthome, i, cateTrans)
+remove(activeheadphones, cables, computers, desktops, harddrives, headphones, iodevices, laptops, monitors, other, printer, speakers, stands, tablets, smarthome, i, cateTrans, elecCorp, elecPriv)
 
 ```
 
 ```{r Product categories for Blackwell, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Create category overview from Blackwell data
 blackwell <- read_csv('../input/20190326Blackwellproducts.csv')
 
 blackwell %>% 
@@ -521,7 +532,7 @@ blackwell %>%
       panel.border=element_blank(),
       panel.grid.major=element_blank()
     ) +
-  labs(title = "Sales volume per product category") +
+  labs(title = "Blackwell: sales volume per product category") +
   geom_label(aes(x = ProductType, y = n, label = round(n, 0)),
              hjust = 1, 
              vjust = 0.5, 
@@ -530,13 +541,13 @@ blackwell %>%
              label.size = NA, 
              family="Helvetica", 
              size = 3)
-
-
-
 ```
 
-### Rule creation
+## Rule creation
 
+Next, we will use a market basket analysis in order to gain insight in which products are generally sold together. This will hopefully provide some clues as to which products can be recommended together, and whether there is potential for upside.
+
+### Complete dataset
 The first dataset to explore is the data as provided. Requiring a minimum length of 2 products to avoid single item rules, as well as a confidence of at least 30% and a very low support of 1%.
 
 It shows that a lot of desktops and computers are being bought together. Hence, the reason why we split the dataset for organisations and private individuals earlier. Furthermore, it can be observed that the ViewSOnic Monitor is an important accessoire.
@@ -555,21 +566,13 @@ inspect(head(sort(rules, by = "lift"), 5))
 
 Next, we assess which categories of products are usually bought together. As we know that desktop and laptops are usually the main item in a purchase, we make sure that these are only found in the left hand side of the rule equation.
 
-
-[TO DO
-Create rules for categories
-Investigate which products are not selling much, and with which products they are sold -> promotions
-Dig into categories for region 4 (online only) for Blackwell
-]
-
-
 ```{r Building model with categories, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Laptops =====================================
 rules1 <- apriori(elecCategory, 
                  parameter = list(support = 0.1, confidence = 0.3, minlen = 2),
                  appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
                   )
-inspect(sort(rules1, by = "lift"))
+inspect(head(sort(rules1, by = "lift"),5))
 #plot(rules1, method = "graph", shading = NA)
 ```
 
@@ -583,60 +586,78 @@ Given that laptops and desktops are clearly the main items in a transactions, le
 
 It should be noted that Apple earpods are a popular item by itself as well. Hence, this is an important item to carry, but not necessarily to target is a accessoire for a computer. This is different with the Viewsonic monitor, which is selling much more with a computer than in standalone transactions. The same is true for other monitors (i.e. the one from HP), and MS Office.
 
-```{r Building model with desktop and laptops, echo = F, results = "hide", message = FALSE, warning = FALSE}
+```{r Building rules with desktop and laptops, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Laptops =====================================
 rules1 <- apriori(elecDeskLap, 
                  parameter = list(support = 0.01, confidence = 0.1, minlen = 2),
                  appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
                   )
-inspect(sort(rules1, by = "count"))
+inspect(head(sort(rules1, by = "count"),10))
 #plot(rules1, method = "graph", shading = NA)
 ```
 
-```{r Building model corporates, echo = F, results = "hide", message = FALSE, warning = FALSE}
+### Organisations vs. private individuals
 
-elecCorp <- elecTransactions[corporation == T]
+If we repeat that analysis for organisation only, only rules with a really low confidence and/or lift are found. Hence, the results don't give us any additional information on what accessoires are favored by organisations.
+
+```{r Organisations, echo = F, results = "hide", message = FALSE, warning = FALSE}
+
+elecCorp <- read.transactions('../input/elecCorp.csv', sep = ',', rm.duplicates = F, format = "basket")
 
 rules1 <- apriori(elecCorp, 
-                  parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
+                  parameter = list(support = 0.01, confidence = 0.01, minlen = 2),
+                  appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
 )
 
-inspect(sort(rules1, by = "lift"))
-plot(rules1, method = "graph", shading = NA)
+inspect(head(sort(rules1, by = "lift"), 5))
+#plot(rules1, method = "graph", shading = NA)
 ```
 
-```{r Building model private individuals, echo = F, results = "hide", message = FALSE, warning = FALSE}
+For private individuals, it becomes clear that about 5% of the individuals that buy a desktop also buys a monitor. That ratio might be interesting to improve via promotions and other marketing efforts.
 
-elecCorp <- elecTransactions[corporation == F]
+
+```{r Private individuals, echo = F, results = "hide", message = FALSE, warning = FALSE}
+
+elecPriv<- read.transactions('../input/elecPriv.csv', sep = ',', rm.duplicates = F, format = "basket")
+
+rules1 <- apriori(elecPriv, 
+                  parameter = list(support = 0.01, confidence = 0.01, minlen = 2),
+                  appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
+)
+inspect(sort(rules1, by = "lift"))
+#plot(rules1, method = "graph", shading = NA)
+
+```
+
+### Bestsellers
+
+Lastly, it is interesting to look what products sell well together with the target companies' bestsellers: the iMac and HP Laptop.
+
+For the iMac, the mostly sold accesoires are the Viewsonic Monitor, the Apple earpods, and the 3-button mouse. However, the Apple earpods sell so much without iMacs as well, that there seems to be no relation with the iMac.
+
+```{r HP Laptop accessoires, echo = F, results = "hide", message = FALSE, warning = FALSE}
 
 rules1 <- apriori(elecTransactions, 
-                  parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
-                  appearance = list(default="rhs", lhs="Laptop")
+                  parameter = list(support = 0.01, confidence = 0.01, minlen = 2),
+                  appearance = list(default="rhs", lhs=c("iMac"))
 )
-inspect(sort(rules1, by = "lift"))
-plot(rules1, method = "graph", shading = NA)
 
-
-## Split transaction data into corporation and private individuals
-elecTrans_corp<-elecTransactions[corporation]
-elecTrans_private<-elecTransactions[!corporation]
-
-rules <- apriori(elecTrans_corp, 
-                 parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
-                )
-inspect(sort(rules, by = "lift"))
-plot(rules, method = "graph", shading = NA)
-
-rules <- apriori(elecTrans_private, 
-                 parameter = list(support = 0.01, confidence = 0.5, minlen = 2)
-)
-inspect(sort(rules, by = "count"))
-plot(rules, method = "graph", shading = NA)
+inspect(head(sort(rules1, by = "lift"), 10))
+#plot(rules1, method = "graph", shading = NA)
 ```
 
-Rules for determining whether a transaction what from a corporation or private individual:
+Buyers of an HP Laptop (which interesingly is often sold together with a iMac) is often sold together with the ViewSonic MOnitor, computer games, and the Apple magic keyboard.
 
+```{r iMac accessoires, echo = F, results = "hide", message = FALSE, warning = FALSE}
 
+rules1 <- apriori(elecTransactions, 
+                  parameter = list(support = 0.01, confidence = 0.01, minlen = 2),
+                  appearance = list(default="rhs", lhs=c("HP Laptop"))
+)
+
+inspect(head(sort(rules1, by = "lift"), 10))
+#plot(rules1, method = "graph", shading = NA)
+```
 
 # Appendix for Ubiqum mentors: code
 
