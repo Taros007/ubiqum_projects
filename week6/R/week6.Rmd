@@ -144,6 +144,10 @@ oneItemSales %>%
              label.size = NA, 
              family="Helvetica", 
              size = 3)
+
+#Clean-up
+remove(oneItemSales)
+
 # #Visualization of sample of transactions
 # image(sample(elecTransactions, 200))
 ```
@@ -215,8 +219,6 @@ division %>%
     xlab(NULL) +
     coord_flip() 
     
-
-
 #Code to screen for MS office in transaction  
 # if (elecTransactions[i]@data[97]) {
 #   category[i] <- "PrivateIndividual"    
@@ -228,31 +230,46 @@ There are two levels on which the data can be analysed: product and producttype.
 
 ```{r Create category dataset, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Create new dataset with categories instead of products ====================================
+
+#Start of with functions for desktops and laptops, as this is used later on for analysis of corporates and private individuals as well
+
+DeskLap <- function(df) {
+  laptops <- c(
+    "LG Touchscreen Laptop",
+    "Acer Aspire",
+    "HP Laptop",
+    "ASUS Chromebook",
+    "Apple MacBook Pro",
+    "Apple MacBook Air",
+    "Dell Laptop",
+    "Eluktronics Pro Gaming Laptop",
+    "Alienware Laptop",
+    "HP Notebook Touchscreen Laptop PC"
+  )
+  desktops <- c(
+    "Lenovo Desktop Computer",
+    "iMac",
+    "HP Desktop",
+    "ASUS Desktop",
+    "Dell Desktop",
+    "Intel Desktop",
+    "Acer Desktop",
+    "CYBERPOWER Gamer Desktop",
+    "Dell 2 Desktop"
+    )
+  
+  for (i in seq_along(laptops)){
+    df[df == laptops[i]] <- "Laptop"
+  }
+  
+  for (i in seq_along(desktops)){
+    df[df == desktops[i]] <- "Desktop"
+  }
+}
+
+#The rest is done without a function:
 cateTrans <- readr::read_csv('../input/ElectronidexTransactions2017.csv', col_names = F, trim_ws = T)
 
-laptops <- c(
-  "LG Touchscreen Laptop",
-  "Acer Aspire",
-  "HP Laptop",
-  "ASUS Chromebook",
-  "Apple MacBook Pro",
-  "Apple MacBook Air",
-  "Dell Laptop",
-  "Eluktronics Pro Gaming Laptop",
-  "Alienware Laptop",
-  "HP Notebook Touchscreen Laptop PC"
-  )
-desktops <- c(
-  "Lenovo Desktop Computer",
-  "iMac",
-  "HP Desktop",
-  "ASUS Desktop",
-  "Dell Desktop",
-  "Intel Desktop",
-  "Acer Desktop",
-  "CYBERPOWER Gamer Desktop",
-  "Dell 2 Desktop"
-  )
 monitors <- c(
   "Acer Monitor",
   "LG Monitor",
@@ -388,14 +405,16 @@ smarthome <- c(
   "Roku Express"
 )
 
-for (i in seq_along(laptops)){
-  cateTrans[cateTrans == laptops[i]] <- "Laptop"
-}
+cateTrans %>% DeskLap()
 
-for (i in seq_along(desktops)){
-  cateTrans[cateTrans == desktops[i]] <- "Desktop"
-}
+##Create data with only laptops and desktops transformed
+#Write data frame to HDD
+readr::write_csv(cateTrans, '../input/replaced1.csv', na="", col_names = F)
 
+#Load product category file as transaction file
+elecDeskLap <- read.transactions('../input/replaced1.csv', sep = ',', rm.duplicates = F, format = "basket")
+
+#Then keep going with the rest of the transformations
 for (i in seq_along(monitors)){
   cateTrans[cateTrans == monitors[i]] <- "Monitor"
 }
@@ -448,11 +467,11 @@ for (i in seq_along(smarthome)){
 readr::write_csv(cateTrans, '../input/replaced.csv', na="", col_names = F)
 
 #Load product category file as transaction file
-cateTrans <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
+elecCategory <- read.transactions('../input/replaced.csv', sep = ',', rm.duplicates = F, format = "basket")
 
 #Plot product categories
 
-cateTrans %>% 
+elecCategory %>% 
   itemFrequency(type = "absolute") %>% 
   sort(decreasing = T) %>%
   head(n = 15) %>% 
@@ -480,7 +499,7 @@ cateTrans %>%
              size = 3)
 
 #Clean up variables
-remove(activeheadphones, cables, computers, desktops, harddrives, headphones, iodevices, laptops, monitors, other, printer, speakers, stands, tablets, smarthome, i)
+remove(activeheadphones, cables, computers, desktops, harddrives, headphones, iodevices, laptops, monitors, other, printer, speakers, stands, tablets, smarthome, i, cateTrans)
 
 ```
 
@@ -511,52 +530,85 @@ blackwell %>%
              label.size = NA, 
              family="Helvetica", 
              size = 3)
+
+
+
 ```
 
-```{r Import datasets, echo = F, results = "hide", message = FALSE, warning = FALSE}
-## Import dataset =================================
-elecCategory <- read.transactions('../input/replaced.csv', sep = ',',rm.duplicates = F, format = "basket")
-```
 ### Rule creation
 
-The first dataset to explore is the data as provided. Requiring a minimum length of 2 products to avoid single item rules, as well as a confidence of at least 50% and a very low support of 1%. 
+The first dataset to explore is the data as provided. Requiring a minimum length of 2 products to avoid single item rules, as well as a confidence of at least 30% and a very low support of 1%.
+
+It shows that a lot of desktops and computers are being bought together. Hence, the reason why we split the dataset for organisations and private individuals earlier. Furthermore, it can be observed that the ViewSOnic Monitor is an important accessoire.
 
 ```{r Building model on original data, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Building of the model ====================================
 
 rules <- apriori(elecTransactions, 
-                 parameter = list(support = 0.01, confidence = 0.2, minlen = 1, maxlen = 2)
+                 parameter = list(support = 0.01, confidence = 0.3, minlen = 1, maxlen = 3)
                  )
 
-head(inspect(sort(rules, by = "lift")), 5)
+inspect(head(sort(rules, by = "lift"), 5))
 #arulesViz::ruleExplorer(rules)
 #plot(rules, method = "graph", shading = NA)
 ```
 
-However, given that both laptops and desktops can be considered the main products in a purchase, these are removed from the rhs side of rules.
+Next, we assess which categories of products are usually bought together. As we know that desktop and laptops are usually the main item in a purchase, we make sure that these are only found in the left hand side of the rule equation.
+
+
+[TO DO
+Create rules for categories
+Investigate which products are not selling much, and with which products they are sold -> promotions
+Dig into categories for region 4 (online only) for Blackwell
+]
+
 
 ```{r Building model with categories, echo = F, results = "hide", message = FALSE, warning = FALSE}
 ## Digging into Laptops =====================================
-rules1 <- apriori(elecTransactions, 
-                 parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
-                 appearance = list(default="rhs", lhs="Laptop")
+rules1 <- apriori(elecCategory, 
+                 parameter = list(support = 0.1, confidence = 0.3, minlen = 2),
+                 appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
                   )
 inspect(sort(rules1, by = "lift"))
-plot(rules1, method = "graph", shading = NA)
+#plot(rules1, method = "graph", shading = NA)
+```
+
+Given that laptops and desktops are clearly the main items in a transactions, let's see what people tend to buy together with those items. From the rules below, sorted by frequency (count), it becomes clear that the following products are sold most with a computer:
+
+1. Apple Earpods
+2. Viewsonic monitor
+3. Samsung monitor
+4. I/O-devices (mouse, keyboard)
+5. MS Office Home/Student
+
+It should be noted that Apple earpods are a popular item by itself as well. Hence, this is an important item to carry, but not necessarily to target is a accessoire for a computer. This is different with the Viewsonic monitor, which is selling much more with a computer than in standalone transactions. The same is true for other monitors (i.e. the one from HP), and MS Office.
+
+```{r Building model with desktop and laptops, echo = F, results = "hide", message = FALSE, warning = FALSE}
+## Digging into Laptops =====================================
+rules1 <- apriori(elecDeskLap, 
+                 parameter = list(support = 0.01, confidence = 0.1, minlen = 2),
+                 appearance = list(default="rhs", lhs=c("Laptop", "Desktop"))
+                  )
+inspect(sort(rules1, by = "count"))
+#plot(rules1, method = "graph", shading = NA)
 ```
 
 ```{r Building model corporates, echo = F, results = "hide", message = FALSE, warning = FALSE}
-## Digging into Desktops =====================================
-rules1 <- apriori(elecTransactions, 
-                  parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
-                  appearance = list(default="rhs", lhs="Desktop")
+
+elecCorp <- elecTransactions[corporation == T]
+
+rules1 <- apriori(elecCorp, 
+                  parameter = list(support = 0.05, confidence = 0.5, minlen = 2)
 )
+
 inspect(sort(rules1, by = "lift"))
 plot(rules1, method = "graph", shading = NA)
 ```
 
 ```{r Building model private individuals, echo = F, results = "hide", message = FALSE, warning = FALSE}
-## Digging into Monitors =====================================
+
+elecCorp <- elecTransactions[corporation == F]
+
 rules1 <- apriori(elecTransactions, 
                   parameter = list(support = 0.01, confidence = 0.2, minlen = 2),
                   appearance = list(default="rhs", lhs="Laptop")
