@@ -531,30 +531,50 @@ remove(activeheadphones, cables, computers, desktops, harddrives, headphones, io
 ## Create category overview from Blackwell data
 blackwell <- read_csv('../input/20190326Blackwellproducts.csv')
 
-blackwell %>% 
-  group_by(ProductType) %>% 
-  summarize(n=sum(Volume)) %>%
-  ggplot(n, mapping=aes(x = reorder(ProductType, n), y = n)) + 
-    geom_bar(stat = "identity") +
-    geom_col(fill = "#1380A1") +
-    coord_flip() +
-    theme_light() +
-    theme(
-      axis.title = element_text(size = 18), 
-      axis.title.x=element_blank(),
-      axis.title.y=element_blank(),
-      panel.border=element_blank(),
-      panel.grid.major=element_blank()
-    ) +
-  labs(title = "Blackwell: sales volume per product category") +
-  geom_label(aes(x = ProductType, y = n, label = round(n, 0)),
-             hjust = 1, 
-             vjust = 0.5, 
-             colour = "white", 
-             fill = NA, 
-             label.size = NA, 
-             family="Helvetica", 
-             size = 3)
+blackwell <- as.data.frame(blackwell)
+blackwell[blackwell == "PC"] <- "Desktop"
+blackwell[blackwell == "Display"] <- "Monitor"
+blackwell[blackwell == "Tablet"] <- "Tablets"
+blackwell[blackwell == "Netbook"] <- "Laptop"
+blackwell[blackwell == "PrinterSupplies"] <- "Printer"
+
+temp <- elecCategory %>% 
+  itemFrequency(type = "absolute") %>% 
+  sort(decreasing = T) %>%
+  head(n = 15) %>% 
+  as_tibble(pkgconfig::set_config("tibble::rownames" = "ProductType"))
+  
+temp$company <- "Electronidex"
+
+temp2 <- blackwell %>% group_by(ProductType) %>% summarise(value = sum(Volume)) %>% mutate(company = "Blackwell")
+
+temp_total <- full_join(x = temp, y = temp2)
+
+# ggplot(data = temp_total, aes(x = ProductType,  fill = company)) + 
+#   geom_col(data = subset(temp_total, company == "Blackwell"), aes(y = value)) + 
+#   geom_col(data = subset(temp_total, company == "Electronidex"), 
+#            mapping = aes(y = -value),
+#            position = "identity") +
+#   scale_y_continuous(labels = abs) +
+#   coord_flip() +
+#   ylab("Sales volume") +
+#   xlab("Product Type") +
+#   labs(title = "Sales volume per product type", subtitle = "Blackwell vs. Electronidex") +
+#   theme(legend.position = "bottom", legend.title = element_blank())
+
+ggplot(data = temp_total, 
+       mapping = aes(x = reorder(ProductType, value, sum), fill = company, 
+                     y = ifelse(test = company == "Blackwell", 
+                                yes = -value, no = value))) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = abs, limits = max(temp_total$value) * c(-1,1)) +
+  coord_flip() +
+  ylab("Sales volume") +
+  labs(title = "Sales volume per product type", subtitle = "Blackwell vs. Electronidex") +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), axis.title.y=element_blank())
+
+remove(temp, temp2, temp_total)
+
 ```
 
 ## Rule creation
