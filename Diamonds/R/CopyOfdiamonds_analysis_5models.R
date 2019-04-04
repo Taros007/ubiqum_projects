@@ -6,6 +6,8 @@ library(corrplot)
 library(GGally)
 library(caret)
 
+source('../week5/R/outliers.R')
+
 # Prepare clusters =================================
 cl <- makeCluster(3)
 registerDoParallel(cl)
@@ -26,6 +28,12 @@ knownDiamonds %<>%
     color = as.factor(color),
     clarity = ordered(as.factor(clarity), levels = c("IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1"))
   )
+
+#Remove outliers
+is_no_outlier <- isnt_out_mad(knownDiamonds$price, thres = 3)
+knownDiamonds$is_no_outlier <- is_no_outlier
+knownDiamonds <- knownDiamonds[is_no_outlier,]
+knownDiamonds <- select(knownDiamonds, -is_no_outlier)
 
 ## Create sample of data for quick testing =======
 #knownDiamonds %<>% sample_frac(0.1)
@@ -66,7 +74,6 @@ for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
   cat("Test", paste0("rf_",i), "results in the following metrics:", postResample(test$Predictions, test$price),"\n")
 }
 
-
 # #Predictions
 unknownDiamonds <- readRDS('./input/validation_NOprice.rds')
 
@@ -76,7 +83,6 @@ unknownDiamonds %<>%
      color = as.factor(color),
      clarity = ordered(as.factor(clarity), levels = c("IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1"))
    )
-
 
 for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
   selecteduDiamonds <- filter(unknownDiamonds, cut == i)
@@ -107,12 +113,9 @@ for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
   }
 }
 
-finalpredictions %<>% select("id", "Prediction")
-saveRDS(finalPredictions, './output/predToine1.rds')
- 
-## Dummify data =================================
-# newDataFrame <- dummyVars(" ~ .", data = unknownDiamonds)
-# unknownDiamondsDummy <- data.frame(predict(newDataFrame, newdata = unknownDiamonds))
-# 
-# unknownDiamondsDummy$Prediction <- predict(rfFit1, unknownDiamondsDummy)
-# finalPredictions <- unknownDiamondsDummy %>% select("id", "Prediction")
+finalpredictions %<>% select("id", "pred")
+pred1 <- readRDS('./output/predToine1.rds')
+
+postResample(finalpredictions$pred, pred1$Prediction)
+
+saveRDS(finalpredictions, './output/predToine2.rds')

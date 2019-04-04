@@ -6,32 +6,14 @@ library(corrplot)
 library(GGally)
 library(caret)
 
+source('../week5/R/outliers.R')
+
 # Prepare clusters =================================
 cl <- makeCluster(3)
 registerDoParallel(cl)
 
 # import data 
 knownDiamonds <- readRDS('./input/train.rds')
-
-# Dataset information ----
-?diamonds
-
-# Data insights ----
-
-# The diamonds with a bad cut are in average more expensive
-knownDiamonds %>% 
-  ggplot(aes(cut, price)) + 
-    geom_boxplot()
-
-# The diamonds with a bad color are also more expensive
-knownDiamonds %>% 
-  ggplot(aes(color, price)) + 
-    geom_boxplot()
-
-# And the diamonds with a bad clarity have a higer price
-knownDiamonds %>% 
-  ggplot(aes(clarity, price)) +
-    geom_boxplot()
 
 # Your task ----
 
@@ -47,52 +29,27 @@ knownDiamonds %<>%
     clarity = ordered(as.factor(clarity), levels = c("IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1"))
     )
 
-#Explore data
-glimpse(knownDiamonds)
-summary(knownDiamonds)
+#Remove outliers
+is_no_outlier <- isnt_out_mad(knownDiamonds$price, thres = 3)
+knownDiamonds$is_no_outlier <- is_no_outlier
+knownDiamonds <- knownDiamonds[is_no_outlier,]
+knownDiamonds <- select(knownDiamonds, -is_no_outlier)
 
-#Find NAs - none found
-sapply(knownDiamonds, function(x) sum(is.na(x)))
+is_no_outlier <- isnt_out_mad(knownDiamonds$carat, thres = 3)
+knownDiamonds$is_no_outlier <- is_no_outlier
+knownDiamonds <- knownDiamonds[is_no_outlier,]
+knownDiamonds <- select(knownDiamonds, -is_no_outlier)
 
-#plotting all numeric variables
-knownDiamonds %>%
-  keep(is.numeric) %>% 
-  gather() %>% 
-  ggplot(aes(value)) +
-  facet_wrap(~ key, scales = "free") +
-  geom_histogram()
+is_no_outlier <- isnt_out_mad(knownDiamonds$depth, thres = 3)
+knownDiamonds$is_no_outlier <- is_no_outlier
+knownDiamonds <- knownDiamonds[is_no_outlier,]
+knownDiamonds <- select(knownDiamonds, -is_no_outlier)
 
-## Detect collinearity & correlation =========================
-corrData <- cor(knownDiamonds %>% select(-cut,-color, -clarity, -id))
-corrplot(corrData, type = "upper", tl.pos = "td",
-         method = "circle", tl.cex = 0.5, tl.col = 'black',
-         diag = FALSE)
-
-## Investigate relation between caret, cut, and price ========
-knownDiamonds %>% 
-  select("cut", "price", "carat") %>% 
-  GGally::ggpairs()
-
-# How higher the quality, how smaller the diamond
-ggplot(knownDiamonds) + geom_boxplot(mapping = aes(x = cut, y = carat)) + coord_flip()
-# How better the color, how smaller the diamond
-ggplot(knownDiamonds) + geom_boxplot(mapping = aes(x = color, y = carat)) + coord_flip()
-
-# Any combined relationship?
-cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-ggplot(knownDiamonds, aes(x = carat, y = price, color = cut)) + 
-  geom_point() +
-  scale_color_manual(values = cbbPalette)
-
-## Create sample of data for quick testing =======
-knownDiamonds %<>% sample_frac(0.1)
+knownDiamonds %<>% select(-id) 
 
 ## Dummify data =================================
 newDataFrame <- dummyVars(" ~ .", data = knownDiamonds)
 diamondDummy <- data.frame(predict(newDataFrame, newdata = knownDiamonds))
-
-#Remove features
-diamondDummy %<>% select(-depth, -x, -y, -z,-id) #
 
 ## Training of model =================================
 for (n in 1) {  #only one run due to time constraints.
@@ -113,9 +70,9 @@ for (n in 1) {  #only one run due to time constraints.
   #train Random Forest Regression model
   rfFit1 <- caret::train(price~ .,
                          data = train,
-                         method = "rf",
-                         trControl=ctrl
-                         #preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
+                         method = "knn",
+                         trControl=ctrl,
+                         preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
                         )
   
   # Predicting testset ================================
@@ -129,7 +86,6 @@ for (n in 1) {  #only one run due to time constraints.
 ggplot(test, aes(x = price, y = Predictions)) + 
   geom_point() + 
   geom_abline(intercept = 0, slope = 1)
-
 
 #Predictions
 unknownDiamonds <- readRDS('./input/validation_NOprice.rds')
@@ -146,6 +102,11 @@ newDataFrame <- dummyVars(" ~ .", data = unknownDiamonds)
 unknownDiamondsDummy <- data.frame(predict(newDataFrame, newdata = unknownDiamonds))
 
 unknownDiamondsDummy$Prediction <- predict(rfFit1, unknownDiamondsDummy)
+
 finalPredictions <- unknownDiamondsDummy %>% select("id", "Prediction")
 
-saveRDS(finalPredictions, './output/predToine1.rds')
+pred1 <- readRDS('./output/predToine1.rds')
+
+postResample(finalPredictions$Prediction, pred1$Prediction)
+
+saveRDS(finalPredictions, './output/predToine3.rds')

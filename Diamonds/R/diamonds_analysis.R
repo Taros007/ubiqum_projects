@@ -73,9 +73,9 @@ knownDiamonds %>%
   select("cut", "price", "carat") %>% 
   GGally::ggpairs()
 
-# How higher the quality, how smaller the diamond
+# How higher the quality, how lighter (smaller) the diamond
 ggplot(knownDiamonds) + geom_boxplot(mapping = aes(x = cut, y = carat)) + coord_flip()
-# How better the color, how smaller the diamond
+# How better the color, how lighter (smaller) the diamond
 ggplot(knownDiamonds) + geom_boxplot(mapping = aes(x = color, y = carat)) + coord_flip()
 
 # Any combined relationship?
