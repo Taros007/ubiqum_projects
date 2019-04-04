@@ -85,45 +85,43 @@ ggplot(knownDiamonds, aes(x = carat, y = price, color = cut)) +
   scale_color_manual(values = cbbPalette)
 
 ## Create sample of data for quick testing =======
-knownDiamonds %<>% sample_frac(0.1)
+#knownDiamonds %<>% sample_frac(0.1)
 
-## Dummify data =================================
-newDataFrame <- dummyVars(" ~ .", data = knownDiamonds)
-diamondDummy <- data.frame(predict(newDataFrame, newdata = knownDiamonds))
-
-#Remove features
-diamondDummy %<>% select(-depth, -x, -y, -z,-id) #
-
-## Training of model =================================
-for (n in 1) {  #only one run due to time constraints.
-  set.seed(541)
+for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
+  i <- filter(knownDiamonds, cut == i)
+  newDataFrame <- dummyVars(" ~ .", data = i)
+  i <- data.frame(predict(newDataFrame, newdata = i))
+  i %<>% select(-depth, -x, -y, -z,-id) 
   # train and test
-  train_ids <- createDataPartition(y = diamondDummy$price,
+  train_ids <- createDataPartition(y = i$price,
                                    p = 0.75,
                                    list = F)
-  train <- diamondDummy[train_ids,]
-  test <- diamondDummy[-train_ids,]
+  train <- i[train_ids,]
+  test <- i[-train_ids,]
   
   # cross validation
   ctrl <- trainControl(method = "repeatedcv",
                        number = 4,
                        repeats = 1
-                      )
+  )
   
   #train Random Forest Regression model
-  rfFit1 <- caret::train(price~ .,
+  paste0("rf_",i) <- caret::train(price~ .,
                          data = train,
-                         method = "rf",
-                         trControl=ctrl
-                         #preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
-                        )
+                         method = "knn",
+                         trControl=ctrl,
+                         preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
+  )
   
   # Predicting testset ================================
-  test$Predictions <- predict(rfFit1, test)
+  test$Predictions <- predict(paste0("rf_",i), test)
   postResample(test$Predictions, test$price)
   
-  cat("Test", n, "results in the following metrics:", postResample(test$Predictions, test$price),"\n")
-} #End of the for loop to test stability of the model with different seed numbers.
+  cat("Test", paste0("rf_",i), "results in the following metrics:", postResample(test$Predictions, test$price),"\n")
+}
+
+
+
 
 #Plot predicted vs. actual values
 ggplot(test, aes(x = price, y = Predictions)) + 
@@ -147,5 +145,3 @@ unknownDiamondsDummy <- data.frame(predict(newDataFrame, newdata = unknownDiamon
 
 unknownDiamondsDummy$Prediction <- predict(rfFit1, unknownDiamondsDummy)
 finalPredictions <- unknownDiamondsDummy %>% select("id", "Prediction")
-
-saveRDS(finalPredictions, './output/predToine1.rds')
