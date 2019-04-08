@@ -20,20 +20,28 @@ group_by(y, date(DateTime)) %>%
   arrange(desc(n)) %>% 
   print(n = nrow(.))
 
-#Fix NAs by taking last weeks' value (comparable day)
-powerDatacopy <- powerData
-# powerDatacopy[11] <- lag(powerDatacopy[1], 10080)
-# powerDatacopy[1] <- ifelse(is.na(powerDatacopy[1]), powerDatacopy[11], powerDatacopy[1])
-# ifelse(which(is.na(powerDatacopy[1])) >= 10080, which(is.na(powerDatacopy[1]))-10080, which(is.na(powerDatacopy[1])))
-# newdata<-apply(powerDatacopy[,c(1:8)], MARGIN=2, function(x) {ifelse(is.na(x), is.na(x),x)})
+#Fix NAs by taking last weeks' value (comparable day) ==================
+powerDatacopy <- powerData #for testing purposes
 
+##FAILED ATTEMPTS - how to make these work?:
+#powerDatacopy[11] <- lag(powerDatacopy[1], 10080)
+#powerDatacopy[1] <- ifelse(is.na(powerDatacopy[1]), powerDatacopy[11], powerDatacopy[1])
+
+# ifelse(which(is.na(powerDatacopy[1])) >= 10080, which(is.na(powerDatacopy[1]))-10080, which(is.na(powerDatacopy[1])))
+# newdata<-apply(powerDatacopy[,c(1:8)], MARGIN=2, function(x) {ifelse(is.na(x), is.na(x-10800),x)})
+
+# Identify index of all NAs, and substract 10080 (minutes in a week) from it if possible
+# Subsequently, replace all NAs
 y <- ifelse(which(is.na(powerDatacopy[1])) >= 10080, 
             which(is.na(powerDatacopy[1]))-10080, 
             which(is.na(powerDatacopy[1])))
 z <- which(is.na(powerDatacopy[1]))
-#powerDatacopy$Global_active_power[z] <- powerDatacopy$Global_active_power[y]
 powerDatacopy[z,c(1:8)] <- powerDatacopy[y,c(1:8)]
+remove(y,z)
 
-#Check start and end dates for every year
+# Omit NAs that couldn't be imputed
+powerDatacopy %<>% na.omit()
+
+#Check start and end dates for every year =====================
 group_by(powerData, year) %>% 
   summarize(min = min(DateTime), max = max(DateTime))
