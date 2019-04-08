@@ -18,7 +18,7 @@ dt_all <- rpart::rpart(price ~.,
                        data = diamonds_subset)
 
 # visualizing the dt
-rattle::fancyRpartPlot(dt_all, cex = 0.7, tweak = 1)
+rpart.plot::rpart.plot(dt_all, cex = 0.7, tweak = 1)
 
 # Observations: carat is the most relevant variable to use it to predict price
 plot_priceVScarat <- diamonds %>% 
@@ -50,7 +50,7 @@ dt_categories <- rpart::rpart(price ~ cut + color + clarity,
                               control = c(minsplit = 20, cp = 0.004))
 
 # ploting the decision tree
-rattle::fancyRpartPlot(dt_categories, cex = 1)
+rpart.plot::rpart.plot(dt_categories, cex = 1)
 # We are going to use color and clarity for our modalization process
 
 # creating dummy variables 

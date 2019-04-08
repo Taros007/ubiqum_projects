@@ -69,10 +69,12 @@ for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
   test$Predictions <- predict(rfFit1, test)
   postResample(test$Predictions, test$price)
   
-  assign(paste0("rf_",i), rfFit1)
+  assign(i, rfFit1)
   
   cat("Test", paste0("rf_",i), "results in the following metrics:", postResample(test$Predictions, test$price),"\n")
 }
+
+modellist <- c(Ideal,`Very Good`, Good, Fair, Premium)
 
 # #Predictions
 unknownDiamonds <- readRDS('./input/validation_NOprice.rds')
@@ -84,37 +86,52 @@ unknownDiamonds %<>%
      clarity = ordered(as.factor(clarity), levels = c("IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1"))
    )
 
-for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
-  selecteduDiamonds <- filter(unknownDiamonds, cut == i)
-  selecteduDiamonds %<>% select(-depth, -y, -x, -z, -cut)
-  newDataFrame <- dummyVars(" ~ .", data = selecteduDiamonds)
-  selecteduDiamonds <- data.frame(predict(newDataFrame, newdata = selecteduDiamonds))
+# for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
+#   selecteduDiamonds <- filter(unknownDiamonds, cut == i)
+#   selecteduDiamonds %<>% select(-depth, -y, -x, -z, -cut)
+#   newDataFrame <- dummyVars(" ~ .", data = selecteduDiamonds)
+#   selecteduDiamonds <- data.frame(predict(newDataFrame, newdata = selecteduDiamonds))
+# 
+#   if (i == "Ideal"){
+#     selecteduDiamonds$pred <- predict(rf_Ideal, selecteduDiamonds)
+#     finalpredictions <- selecteduDiamonds %>% filter(id<0)
+#     finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
+#   }
+#   if (i == "Premium"){
+#     selecteduDiamonds$pred <- predict(rf_Premium, selecteduDiamonds)
+#     finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
+#   }
+#   if (i == "Very Good"){
+#     selecteduDiamonds$pred <- predict(`rf_Very Good`, selecteduDiamonds)
+#     finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
+#   }
+#   if (i == "Good"){
+#     selecteduDiamonds$pred <- predict(rf_Good, selecteduDiamonds)
+#     finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
+#   }
+#   if (i == "Fair"){
+#     selecteduDiamonds$pred <- predict(rf_Fair, selecteduDiamonds)
+#     finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
+#   }
+# }
+# 
 
-  if (i == "Ideal"){
-    selecteduDiamonds$pred <- predict(rf_Ideal, selecteduDiamonds)
-    finalpredictions <- selecteduDiamonds %>% filter(id<0)
-    finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
-  }
-  if (i == "Premium"){
-    selecteduDiamonds$pred <- predict(rf_Premium, selecteduDiamonds)
-    finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
-  }
-  if (i == "Very Good"){
-    selecteduDiamonds$pred <- predict(`rf_Very Good`, selecteduDiamonds)
-    finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
-  }
-  if (i == "Good"){
-    selecteduDiamonds$pred <- predict(rf_Good, selecteduDiamonds)
-    finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
-  }
-  if (i == "Fair"){
-    selecteduDiamonds$pred <- predict(rf_Fair, selecteduDiamonds)
-    finalpredictions <- rbind(finalpredictions, selecteduDiamonds)
-  }
+# pericles Try
+
+for (i in c("Ideal","Premium", "Very Good", "Good", "Fair")){
+  df$Prediction <- apply(selecteduDiamonds %>% filter(cut == i ),
+                         1,
+                         predict(object = identity(i)))
 }
+
+a
 
 finalpredictions %<>% select("id", "pred")
 pred1 <- readRDS('./output/predToine1.rds')
+
+
+
+
 
 postResample(finalpredictions$pred, pred1$Prediction)
 
