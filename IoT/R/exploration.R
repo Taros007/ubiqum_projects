@@ -4,6 +4,7 @@ library(magrittr)
 library(datetime)
 library(lubridate)
 library(scales)
+library(corrr)
 source('./R/BBC_style.R')
 
 ## Load preprocessed data ========================
@@ -16,7 +17,7 @@ group_by(powerData, year) %>%
 ## Calculate average temperature per day ===============================
 # Load weather data
 weather <- readRDS('./input/weatherinfo.RDS')
-names(weather)[names(weather) == 'day'] <- 'date'
+names(weather)[names(weather) == 'Date'] <- 'date'
 
 weather$avg_temp <- rowMeans(select(weather,hour0:hour23))
 powerData$avg_temp <- as.numeric(weather$avg_temp[match(date(powerData$DateTime), weather$date)])
@@ -172,11 +173,30 @@ ggplot(graphData,
   labs(title="Monthly energy costs",
        subtitle="(in €)")
 
+## Scatter weather vs energy use ===================
 
+y <- powerData %>% 
+  group_by(month, day) %>% 
+  summarise(Kitchen = mean(Sub_metering_1),
+            'Laundry Room' = mean(Sub_metering_2), 
+            'Water heater & A/C' = mean(Sub_metering_3),
+            'Non-submetered' = mean(Sub_unnumbered),
+            avg_temp = mean(avg_temp)) %>% 
+  correlate() %>% 
+  focus(avg_temp) %>%
+  mutate(rowname = reorder(rowname, avg_temp)) %>%
+  filter(!rowname %in% c("month", "day")) %>% 
+  ggplot(aes(rowname, avg_temp)) +
+    geom_col(fill = "#1380A1") + 
+    coord_cartesian(xlim = c(-1, 1)) + 
+    coord_flip() +
+    labs(title="Correlation between temperature and electricity use",
+         subtitle="measured per submeter") +
+    ylab("Correlation") +
+    theme(axis.title.y=element_blank()) +
+    geom_hline(aes(yintercept = 0), linetype="dotted")
 
-## Scatter weather vs energy use
-
-
+finalise_plot(y, "EuroStat (weather) & UCI (energy use)","./output")
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
