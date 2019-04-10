@@ -33,11 +33,11 @@ history <- setNames(
     "hour23")
   )
 
-for (i in 1:950){
-  day = date("2006-12-16 17:24:00 CET") + days(i - 1)
+for (i in 1:980){
+  day = date("2009-07-23 17:24:00 CET") + days(i - 1)
   then <- get_forecast_for(48.7791,2.2887, day, add_headers=TRUE, units = "auto")
   history <- data.frame(rbind(as.matrix(history), c(as_date(then$daily$time), then$hourly$temperature)))
 }
 
 history[,1] <- as_date(history[,1])
-saveRDS(history,'./weatherinfo.RDS')
+saveRDS(history,'./weatherinfo2.RDS')

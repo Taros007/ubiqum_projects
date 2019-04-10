@@ -19,6 +19,10 @@ PPT:
 Goal of client: offering highly efficient smart homes that provide owners with power usage analytics
 show location of village - wealthy?
 show energy use, and show what can be done with it
+Show use between meters, and explanation via weather?
+Show total energy costs
+types of energy savings (heating (isolation) vs discretionary use)
+Is there additional power and power related information that would benefit analytics in the future if added to the data set?
 
 Sources:
 Weatherdata: darksky (https://darksky.net/)
