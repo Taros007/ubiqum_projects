@@ -20,6 +20,8 @@ powerData$minute <- minute(powerData$DateTime)
 powerData$weekday <- weekdays(powerData$DateTime)
 powerData$weekend <- sapply(powerData, function(x) ifelse(powerData$weekday %in% c("Saturday", "Sunday"), 1, 0))
 
+powerData$weekday <- factor(powerData$weekday, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
 ## Calculate power used by remainder of house ===============
 #from data notes: 1.(global_active_power*1000/60 - sub_metering_1 
 #- sub_metering_2 - sub_metering_3) 
@@ -37,16 +39,16 @@ powerData$Sub_unnumbered <- sapply((powerData$Global_active_power * 1000 / 60 -
 #Reorder colums, and leave out original Date and Time fields
 powerData <- powerData[c(3:9,19,10:18)]
 
-# #Explore NAs
+#Explore NAs
 # sapply(powerData, function(x) sum(is.na(x)))
 # 
 # y <- powerData[!complete.cases(powerData), ]
 # #Which days have NAs
 # unique(as.Date(y$DateTime))
 # #How many NAs per day?
-# group_by(y, date(DateTime)) %>% 
-#   summarize(n = n()) %>% 
-#   arrange(desc(n)) %>% 
+# group_by(y, date(DateTime)) %>%
+#   summarize(n = n()) %>%
+#   arrange(desc(n)) %>%
 #   print(n = nrow(.))
 
 #Fix NAs by taking last weeks' value (comparable day) ==================

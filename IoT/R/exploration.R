@@ -13,13 +13,46 @@ powerData <- readRDS('./output/powerData.RDS')
 group_by(powerData, year) %>% 
   summarize(min = min(DateTime), max = max(DateTime))
 
+## Calculate average temperature per day ===============================
+# Load weather data
+weather <- readRDS('./input/weatherinfo.RDS')
+names(weather)[names(weather) == 'day'] <- 'date'
+
+weather$avg_temp <- rowMeans(select(weather,hour0:hour23))
+powerData$avg_temp <- as.numeric(weather$avg_temp[match(date(powerData$DateTime), weather$date)])
+
+## Calculate total charges for electricity use ==============
+# Load historical rates (source: Eurostat)
+rates <- read_csv('./resources/nrg_pc_204_1_Data.csv')
+
+#Filter, and convert custom date format to normal dates
+rates %<>% 
+  filter(GEO == "France", 
+         TAX == "All taxes and levies included", 
+         CURRENCY == "Euro") %>% 
+  mutate(
+    TIME =  semester(as_date(ifelse(month(yq(TIME)) == 4, yq(TIME) + months(3), yq(TIME))), with_year = T)
+  ) %>% 
+  select(TIME, Value) %>% 
+  filter(TIME != "2007.1") %>% 
+  rbind(tribble(~"TIME", ~"Value",
+                "2006.2", 0.1222,
+                "2007.1", 0.1222))
+
+#Calculate energy cost per minute
+#z <- with(rates$Value, rates[match(semester(powerData$DateTime, with_year = T), rates$TIME)])
+powerData$rate <- as.numeric(
+  rates$Value[match(semester(powerData$DateTime, with_year = T), rates$TIME)])
+powerData$costs <- powerData$rate / 1000 * powerData$Global_active_power * 1000 / 60
+
 ## Plot use over all years ===============================
 graphData <- powerData %>% 
   group_by(year, month) %>% 
   summarise(Kitchen = sum(Sub_metering_1),
             'Laundry Room' = sum(Sub_metering_2), 
             'Water heater & A/C' = sum(Sub_metering_3),
-            'Non-submetered' = sum(Sub_unnumbered)) %>% 
+            'Non-submetered' = sum(Sub_unnumbered),
+            'Average Temperature' = mean(avg_temp)) %>% 
   gather(Kitchen, 
          'Laundry Room', 
          'Water heater & A/C', 
@@ -39,18 +72,8 @@ ggplot(graphData,
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Monthly energy use",
         subtitle="Measured per submeter (in kWh)")
-  # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
-  #            hjust = 0,
-  #            vjust = 0.5,
-  #            lineheight = 0.8,
-  #            colour = "#555555",
-  #            fill = "white",
-  #            label.size = NA,
-  #            family="Helvetica",
-  #            size = 6)
 
-## Plot use over 24 hrs ===============================
-
+## Plot energy use over 24 hrs ===============================
 graphData <- powerData %>% 
   group_by(hour) %>% 
   summarise(Kitchen = mean(Sub_metering_1),
@@ -76,26 +99,7 @@ ggplot(graphData,
   labs(title="Average energy use during the day",
        subtitle="Measured per submeter in Wh")
   
-## WIP: Plot vs weather ===============================
-
-# Load weather data
-weather <- readRDS('./input/weatherinfo.RDS')
-names(weather)[names(weather) == 'day'] <- 'date'
-
-powerData$date <- date(powerData$DateTime)
-
-powerData %>% 
-  group_by(year) %>% 
-  summarize('Total_power_usage' = sum(Global_active_power * 1000 / 60 / 1e3))
-
-# ## Create attribute with lubridate
-# # weather$year <- year(weather$date)
-# # weather$month <- month(weather$date)
-# # weather$quarter <- quarter(weather$date)
-# # weather$day <- day(weather$date)
-
-## Plot use per month =============================
-
+## Plot energy use per month =============================
 graphData <- powerData %>% 
   group_by(month) %>% 
   summarise(Kitchen = mean(Sub_metering_1),
@@ -110,19 +114,77 @@ graphData <- powerData %>%
          value = "Monthly_power")
 
 ggplot(graphData, 
-       aes(x = as.Date(DateTime,origin="2012-01-01"), 
+       aes(x = as.Date(paste("2012",month,"1", sep="-"),origin="2012-01-01"), 
            y = Monthly_power, 
            colour = Submeter)) +
   geom_line(size = 1) +
   geom_hline(yintercept = 0, size = 1, colour="#333333") +
   scale_colour_manual(values = c("#FAAB18", "#1380A1","#990000", "#588300")) +
   bbc_style() +
-  scale_x_date(date_labels = "%b",date_breaks = "1 month")
+  scale_x_date(date_labels = "%b",date_breaks = "1 month") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Average energy use during the year",
        subtitle="Measured per submeter in Wh")
 
+## Plot electricity use per weekday ==================
+graphData <- powerData %>% 
+  group_by(weekday) %>% 
+  summarise(Kitchen = mean(Sub_metering_1),
+            'Laundry Room' = mean(Sub_metering_2), 
+            'Water heater & A/C' = mean(Sub_metering_3),
+            'Non-submetered' = mean(Sub_unnumbered)
+            ) %>% 
+  gather(Kitchen, 
+         'Laundry Room', 
+         'Water heater & A/C', 
+         'Non-submetered', 
+         key = Submeter, 
+         value = "Weekday_power")
 
-#TODO: plot warm, medium, and cold days energy use
-#TODO: calculate total bill for household
+ggplot(graphData, 
+       aes(x = weekday, 
+           y = Weekday_power, 
+           group = Submeter,
+           colour = Submeter)) +
+  geom_line(size = 1) +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  scale_colour_manual(values = c("#FAAB18", "#1380A1","#990000", "#588300")) +
+  bbc_style() +
+  scale_x_discrete(labels = function(x) {x <- substr(x, 1, 3)}) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title="Energy profile over the week",
+       subtitle="Measured per submeter in Wh")
 
+## Plot total costs electricity ==================
+graphData <- powerData %>% 
+  group_by(year, month) %>% 
+  summarise(costs = sum(costs))
+
+ggplot(graphData, 
+       aes(x = as.Date(paste(year, month, "01", sep="-")), 
+           y = costs
+           )) +
+  geom_line(size = 1, colour = "#FAAB18") +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  scale_x_date(breaks = pretty_breaks(10), labels = date_format("%b-%g")) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title="Monthly energy costs",
+       subtitle="(in €)")
+
+
+
+## Scatter weather vs energy use
+
+
+
+## STORE ==========================================
+# geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
+#            hjust = 0,
+#            vjust = 0.5,
+#            lineheight = 0.8,
+#            colour = "#555555",
+#            fill = "white",
+#            label.size = NA,
+#            family="Helvetica",
+#            size = 6)
