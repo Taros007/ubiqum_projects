@@ -6,7 +6,7 @@ history <- setNames(
   data.frame(stringsAsFactors=FALSE,
     matrix(
       ncol = 25, nrow = 0)), 
-  c("day",
+  c("Date",
     "hour0",
     "hour1", 
     "hour2", 

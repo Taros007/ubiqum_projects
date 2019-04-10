@@ -17,6 +17,8 @@ powerData$quarter <- quarter(powerData$DateTime)
 powerData$day <- day(powerData$DateTime)
 powerData$hour <- hour(powerData$DateTime)
 powerData$minute <- minute(powerData$DateTime)
+powerData$weekday <- weekdays(powerData$DateTime)
+powerData$weekend <- sapply(powerData, function(x) ifelse(powerData$weekday %in% c("Saturday", "Sunday"), 1, 0))
 
 ## Calculate power used by remainder of house ===============
 #from data notes: 1.(global_active_power*1000/60 - sub_metering_1 
@@ -33,7 +35,33 @@ powerData$Sub_unnumbered <- sapply((powerData$Global_active_power * 1000 / 60 -
   ) 
   
 #Reorder colums, and leave out original Date and Time fields
-powerData <- powerData[c(3:9,17,10:16)]
+powerData <- powerData[c(3:9,19,10:18)]
+
+# #Explore NAs
+# sapply(powerData, function(x) sum(is.na(x)))
+# 
+# y <- powerData[!complete.cases(powerData), ]
+# #Which days have NAs
+# unique(as.Date(y$DateTime))
+# #How many NAs per day?
+# group_by(y, date(DateTime)) %>% 
+#   summarize(n = n()) %>% 
+#   arrange(desc(n)) %>% 
+#   print(n = nrow(.))
+
+#Fix NAs by taking last weeks' value (comparable day) ==================
+# Identify index of all NAs, and substract 10080 (minutes in a week) from it if possible
+# Subsequently, replace all NAs
+y <- ifelse(which(is.na(powerData[1])) >= 10080, 
+            which(is.na(powerData[1]))-10080, 
+            which(is.na(powerData[1])))
+z <- which(is.na(powerData[1]))
+powerData[z,c(1:8)] <- powerData[y,c(1:8)]
+remove(y,z)
+
+# Omit NAs that couldn't be imputed (first week of dataset)
+powerData %<>% na.omit()
 
 #Save end-result for further processing
 saveRDS(powerData, './output/powerData.RDS')
+
