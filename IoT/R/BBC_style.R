@@ -116,10 +116,8 @@ create_footer <- function (source_name) {#, logo_image_path) {
 #' @export
 finalise_plot <- function(plot_name,
                           source_name,
-                          save_filepath=file.path(Sys.getenv("TMPDIR"), "tmp-nc.png"),
                           width_pixels=640,
-                          height_pixels=450,
-                          logo_image_path = file.path(system.file("data", package = 'bbplot'),"placeholder.png")) {
+                          height_pixels=450) {
   
   footer <- create_footer(source_name)#, logo_image_path)
   
@@ -129,8 +127,8 @@ finalise_plot <- function(plot_name,
                                  ncol = 1, nrow = 2,
                                  heights = c(1, 0.045/(height_pixels/450)))
   ## print(paste("Saving to", save_filepath))
-  save_plot(plot_grid, width_pixels, height_pixels, save_filepath)
+  #save_plot(plot_grid, width_pixels, height_pixels, save_filepath)
   ## Return (invisibly) a copy of the graph. Can be assigned to a
   ## variable or silently ignored.
-  invisible(plot_grid)
+  plot_grid
 }

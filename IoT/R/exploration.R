@@ -197,7 +197,7 @@ y <- powerData %>%
     theme(axis.title.y=element_blank()) +
     geom_hline(aes(yintercept = 0), linetype="dotted")
 
-finalise_plot(y, "EuroStat (weather) & UCI (energy use)","./output/test.jpg")
+finalise_plot(y, "EuroStat (weather) & UCI (energy use)")
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
