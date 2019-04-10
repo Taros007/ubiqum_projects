@@ -1,0 +1,30 @@
+Alert user when appliances are ready (dish washer, dryer etc.)
+Alert user when some appliances are on longer than expected (safety, energy savings)
+Make home programmable via IFTTT
+Forecast when a device is going to break down (i.e. freezer)
+See what programs are being watched on TV
+Gain insight to support switch to environment friendly sources of energy (e.g solar, wind)
+
+Cost reduction. Analytics can help large utilities increase capital productivity and save millions in operations and maintenance expenditures by helping them improve operations (which can reduce call center volumes or help manage vegetation along their power lines), optimize capital deployment (by identifying the most efﬁcient ways to reduce risk) or understand their procurement better (weighing spending against value).
+
+Reliability. Advanced analytics can also help boost reliability dramatically by preventing outages through more accurate predictions about when to replace failing equipment, or improving outage response through situational awareness (for example, automated dispatch through real-time identification of an issue) and better management of performance.
+
+Customer engagement. Data analytics can help utilities understand customers and their energy use better—knowledge that utilities can use to design new products and services, such as demand-side management programs that reduce electricity use at peak times. Analytics also allow utilities to provide more accurate information to customers about power outages, grid updates, and repair work by ﬁeld crews, all of which can raise customer satisfaction.
+
+Opportunities:
+Branch out to other commodities, most importantly water and gas
+
+
+PPT:
+Goal of client: offering highly efficient smart homes that provide owners with power usage analytics
+show location of village - wealthy?
+show energy use, and show what can be done with it
+
+Sources:
+Weatherdata: darksky (https://darksky.net/)
+Eneryprices: Eurostat (https://ec.europa.eu/eurostat)
+
+
+
+R packages: xts, zoo
+
