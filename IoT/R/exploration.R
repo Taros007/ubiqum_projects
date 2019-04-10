@@ -10,7 +10,7 @@ source('./R/BBC_style.R')
 ## Load preprocessed data ========================
 powerData <- readRDS('./output/powerData.RDS')
 
-# Check start and end dates for every year =====================
+## Check start and end dates for every year =====================
 group_by(powerData, year) %>% 
   summarize(min = min(DateTime), max = max(DateTime))
 
@@ -197,7 +197,18 @@ y <- powerData %>%
     theme(axis.title.y=element_blank()) +
     geom_hline(aes(yintercept = 0), linetype="dotted")
 
-finalise_plot(y, "EuroStat (weather) & UCI (energy use)")
+finalise_plot(y, "Darksky (weather) & UCI (energy use)")
+
+powerData %>% 
+  group_by(month, day) %>% 
+  summarise('Total energy consumption' = mean(total_energy_use),
+            avg_temp = mean(avg_temp)) %>% 
+  ggplot(aes(avg_temp, 'Total Energy Consumption')) +
+  geom_point() +
+  theme_minimal()
+
+y <- filter(powerData, avg_temp >= 40) %>% group_by(day = date(DateTime)) %>% summarize(mean(avg_temp))
+y
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),

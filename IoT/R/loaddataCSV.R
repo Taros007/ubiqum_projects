@@ -35,9 +35,13 @@ powerData$Sub_unnumbered <- sapply((powerData$Global_active_power * 1000 / 60 -
   powerData$Sub_metering_3), 
   function(x) max(x,0)
   ) 
+
+powerData$total_energy_use <- sapply((powerData$Global_active_power * 1000 / 60), 
+                                   function(x) max(x,0)
+) 
   
 #Reorder colums, and leave out original Date and Time fields
-powerData <- powerData[c(3:9,19,10:18)]
+powerData <- powerData[c(3:9,19,20,10:18)]
 
 #Explore NAs
 # sapply(powerData, function(x) sum(is.na(x)))
