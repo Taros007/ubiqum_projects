@@ -188,6 +188,7 @@ y <- powerData %>%
   filter(!rowname %in% c("month", "day")) %>% 
   ggplot(aes(rowname, avg_temp)) +
     geom_col(fill = "#1380A1") + 
+    bbc_style() +
     coord_cartesian(xlim = c(-1, 1)) + 
     coord_flip() +
     labs(title="Correlation between temperature and electricity use",
@@ -196,7 +197,7 @@ y <- powerData %>%
     theme(axis.title.y=element_blank()) +
     geom_hline(aes(yintercept = 0), linetype="dotted")
 
-finalise_plot(y, "EuroStat (weather) & UCI (energy use)","./output")
+finalise_plot(y, "EuroStat (weather) & UCI (energy use)","./output/test.jpg")
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
