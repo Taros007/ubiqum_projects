@@ -209,15 +209,25 @@ plot <- powerData %>%
 
 finalise_plot(plot, "Darksky (weather) & UCI (energy use)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/correlation_weather.jpg')
 
-powerData %>% 
+graphData <- powerData %>% 
   group_by(month, day) %>% 
   summarise(Total_energy_consumption = mean(total_energy_use),
-            avg_temp = mean(avg_temp)) %>% 
-  ggplot(aes(avg_temp, Total_energy_consumption)) +
-  geom_point() +
-  theme_minimal()
+            avg_temp = mean(avg_temp))
 
-#TODO
+#Color points by the first principal component
+graphData$pc <- predict(prcomp(~avg_temp+Total_energy_consumption, graphData))[,1]
+
+plot <- ggplot(graphData, aes(avg_temp, Total_energy_consumption, color = pc)) +
+  geom_point(shape = 16, size = 5, show.legend = FALSE, alpha = .7) +
+  theme_minimal() +
+  scale_color_gradient(low = "#0091ff", high = "#f0650e") +
+  labs(title="Average daily temperature vs daily electricity usage",
+       subtitle="Daily energy use in kWh") +
+  xlab("Average daily temperature (in °C)") +
+  theme(axis.title.y=element_blank()) +
+  geom_hline(aes(yintercept = 0), linetype="dotted")
+
+finalise_plot(plot, "Darksky (weather) & UCI (energy use)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/temp_vs_energy.jpg')
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
