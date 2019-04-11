@@ -61,7 +61,7 @@ graphData <- powerData %>%
          key = Submeter, 
          value = "Monthly_power")
 
-ggplot(graphData, 
+plot <- ggplot(graphData, 
        aes(x = as.Date(paste(year, month, "01", sep="-")), 
            y = Monthly_power / 1e3, 
            colour = Submeter)) +
@@ -73,6 +73,8 @@ ggplot(graphData,
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Monthly energy use",
         subtitle="Measured per submeter (in kWh)")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_over_years.jpg')
 
 ## Plot energy use over 24 hrs ===============================
 graphData <- powerData %>% 
@@ -88,7 +90,7 @@ graphData <- powerData %>%
          key = Submeter, 
          value = "Hourly_power")
 
-ggplot(graphData, 
+plot <- ggplot(graphData, 
        aes(x = hour, 
            y = Hourly_power, 
            colour = Submeter)) +
@@ -99,6 +101,8 @@ ggplot(graphData,
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Average energy use during the day",
        subtitle="Measured per submeter in Wh")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profile.jpg')
   
 ## Plot energy use per month =============================
 graphData <- powerData %>% 
@@ -114,7 +118,7 @@ graphData <- powerData %>%
          key = Submeter, 
          value = "Monthly_power")
 
-ggplot(graphData, 
+plot <- ggplot(graphData, 
        aes(x = as.Date(paste("2012",month,"1", sep="-"),origin="2012-01-01"), 
            y = Monthly_power, 
            colour = Submeter)) +
@@ -126,6 +130,8 @@ ggplot(graphData,
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Average energy use during the year",
        subtitle="Measured per submeter in Wh")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_per_month.jpg')
 
 ## Plot electricity use per weekday ==================
 graphData <- powerData %>% 
@@ -142,7 +148,7 @@ graphData <- powerData %>%
          key = Submeter, 
          value = "Weekday_power")
 
-ggplot(graphData, 
+plot <- ggplot(graphData, 
        aes(x = weekday, 
            y = Weekday_power, 
            group = Submeter,
@@ -156,12 +162,14 @@ ggplot(graphData,
   labs(title="Energy profile over the week",
        subtitle="Measured per submeter in Wh")
 
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_per_weekday.jpg')
+
 ## Plot total costs electricity ==================
 graphData <- powerData %>% 
   group_by(year, month) %>% 
   summarise(costs = sum(costs))
 
-ggplot(graphData, 
+plot <- ggplot(graphData, 
        aes(x = as.Date(paste(year, month, "01", sep="-")), 
            y = costs
            )) +
@@ -173,9 +181,11 @@ ggplot(graphData,
   labs(title="Monthly energy costs",
        subtitle="(in €)")
 
+finalise_plot(plot, "UCI (energy data), EuroStat (electricity costs)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/total_costs.jpg')
+
 ## Scatter weather vs energy use ===================
 
-y <- powerData %>% 
+plot <- powerData %>% 
   group_by(month, day) %>% 
   summarise(Kitchen = mean(Sub_metering_1),
             'Laundry Room' = mean(Sub_metering_2), 
@@ -197,18 +207,17 @@ y <- powerData %>%
     theme(axis.title.y=element_blank()) +
     geom_hline(aes(yintercept = 0), linetype="dotted")
 
-finalise_plot(y, "Darksky (weather) & UCI (energy use)")
+finalise_plot(plot, "Darksky (weather) & UCI (energy use)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/correlation_weather.jpg')
 
 powerData %>% 
   group_by(month, day) %>% 
-  summarise('Total energy consumption' = mean(total_energy_use),
+  summarise(Total_energy_consumption = mean(total_energy_use),
             avg_temp = mean(avg_temp)) %>% 
-  ggplot(aes(avg_temp, 'Total Energy Consumption')) +
+  ggplot(aes(avg_temp, Total_energy_consumption)) +
   geom_point() +
   theme_minimal()
 
-y <- filter(powerData, avg_temp >= 40) %>% group_by(day = date(DateTime)) %>% summarize(mean(avg_temp))
-y
+#TODO
 
 ## STORE ==========================================
 # geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
