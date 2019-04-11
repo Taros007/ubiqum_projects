@@ -37,8 +37,8 @@ rates %<>%
   select(TIME, Value) %>% 
   filter(TIME != "2007.1") %>% 
   rbind(tribble(~"TIME", ~"Value",
-                "2006.2", 0.1222,
-                "2007.1", 0.1222))
+                "2006.2", 0.1146,
+                "2007.1", 0.1198))
 
 #Calculate energy cost per minute
 #z <- with(rates$Value, rates[match(semester(powerData$DateTime, with_year = T), rates$TIME)])
@@ -165,6 +165,29 @@ plot <- ggplot(graphData,
 finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_per_weekday.jpg')
 
 ## Plot total costs electricity ==================
+graphData <- rates
+graphData$Value <- as.numeric(graphData$Value)
+graphData$TIME <- as.numeric(graphData$TIME)
+
+ggplot(graphData, aes(x = as.numeric(TIME), y = Value)) +
+  geom_smooth() + 
+  labs(title = "Electricty prices in France",
+       subtitle = "2010 - 2017") +
+  ylab("Price per kWh") +
+  theme(axis.title.y=element_blank()) +
+  geom_hline(aes(yintercept = 0), linetype="dotted") +
+  bbc_style() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  geom_label(aes(x = TIME, y = Value, label = round(Value, 3)),
+           hjust = 1, 
+           vjust = 0.5, 
+           colour = "red", 
+           fill = NA, 
+           label.size = NA, 
+           family="Helvetica", 
+           size = 3)
+
+## Plot total costs electricity ==================
 graphData <- powerData %>% 
   group_by(year, month) %>% 
   summarise(costs = sum(costs))
@@ -198,13 +221,13 @@ plot <- powerData %>%
   filter(!rowname %in% c("month", "day")) %>% 
   ggplot(aes(rowname, avg_temp)) +
     geom_col(fill = "#1380A1") + 
-    bbc_style() +
     coord_cartesian(xlim = c(-1, 1)) + 
     coord_flip() +
     labs(title="Correlation between temperature and electricity use",
          subtitle="measured per submeter") +
     ylab("Correlation") +
     theme(axis.title.y=element_blank()) +
+    bbc_style() +
     geom_hline(aes(yintercept = 0), linetype="dotted")
 
 finalise_plot(plot, "Darksky (weather) & UCI (energy use)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/correlation_weather.jpg')
