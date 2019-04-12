@@ -37,8 +37,8 @@ rates %<>%
   select(TIME, Value) %>% 
   filter(TIME != "2007.1") %>% 
   rbind(tribble(~"TIME", ~"Value",
-                "2006.2", 0.1146,
-                "2007.1", 0.1198))
+                "2006.2", 0.1200,
+                "2007.1", 0.1218))
 
 #Calculate energy cost per minute
 #z <- with(rates$Value, rates[match(semester(powerData$DateTime, with_year = T), rates$TIME)])
@@ -75,6 +75,11 @@ plot <- ggplot(graphData,
         subtitle="Measured per submeter (in kWh)")
 
 finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_over_years.jpg')
+
+powerData %>% 
+  group_by(year) %>%
+  summarize(Energy_use = sum(total_energy_use))
+
 
 ## Plot energy use over 24 hrs ===============================
 graphData <- powerData %>% 
@@ -164,28 +169,34 @@ plot <- ggplot(graphData,
 
 finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/use_per_weekday.jpg')
 
-## Plot total costs electricity ==================
+## Plot electricity rates ==================
 graphData <- rates
 graphData$Value <- as.numeric(graphData$Value)
 graphData$TIME <- as.numeric(graphData$TIME)
 
-ggplot(graphData, aes(x = as.numeric(TIME), y = Value)) +
-  geom_smooth() + 
-  labs(title = "Electricty prices in France",
-       subtitle = "2010 - 2017") +
+plot <- ggplot(graphData, aes(x = TIME, y = Value)) +
+  geom_smooth(se = F) + 
+  labs(title = "Electricity prices in France",
+       subtitle = "2007 - 2018") +
   ylab("Price per kWh") +
   theme(axis.title.y=element_blank()) +
   geom_hline(aes(yintercept = 0), linetype="dotted") +
+  #scale_y_continuous(breaks = seq(0.0, 0.40, by = 0.05)) +
+  scale_y_continuous(limits = c(0,0.20), labels = dollar_format(suffix = "", prefix = "€")) +
+  scale_x_continuous(breaks = c(2007:2018)) +
   bbc_style() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  geom_label(aes(x = TIME, y = Value, label = round(Value, 3)),
-           hjust = 1, 
-           vjust = 0.5, 
-           colour = "red", 
-           fill = NA, 
-           label.size = NA, 
-           family="Helvetica", 
-           size = 3)
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+# geom_label(aes(x = 2014, y = 0.14, label = "60% price increase"),
+#            hjust = 0,
+#            vjust = 0.5,
+#            lineheight = 0.8,
+#            colour = "#fb2563",
+#            fill = "white",
+#            label.size = NA,
+#            family="Helvetica",
+#            size = 12)
+
+finalise_plot(plot, "Eurostat", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prices_electricity.jpg')
 
 ## Plot total costs electricity ==================
 graphData <- powerData %>% 
@@ -244,6 +255,7 @@ plot <- ggplot(graphData, aes(avg_temp, Total_energy_consumption, color = pc)) +
   geom_point(shape = 16, size = 5, show.legend = FALSE, alpha = .7) +
   theme_minimal() +
   scale_color_gradient(low = "#0091ff", high = "#f0650e") +
+  bbc_style() +
   labs(title="Average daily temperature vs daily electricity usage",
        subtitle="Daily energy use in kWh") +
   xlab("Average daily temperature (in °C)") +
@@ -252,13 +264,4 @@ plot <- ggplot(graphData, aes(avg_temp, Total_energy_consumption, color = pc)) +
 
 finalise_plot(plot, "Darksky (weather) & UCI (energy use)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/temp_vs_energy.jpg')
 
-## STORE ==========================================
-# geom_label(aes(x = as.Date(paste(2009, "07", "01", sep="-")), y = 600, label = "I'm quite a long\nannotation over\nthree rows"),
-#            hjust = 0,
-#            vjust = 0.5,
-#            lineheight = 0.8,
-#            colour = "#555555",
-#            fill = "white",
-#            label.size = NA,
-#            family="Helvetica",
-#            size = 6)
+
