@@ -135,7 +135,8 @@ plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) +
   geom_line() +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
-  labs(title = "Energy use per day (in Wh)", subtitle = "Forecasted and actual for 2010")
+  theme(axis.text.y = element_blank()) +
+  labs(title = "Energy use per day", subtitle = "Forecasted and actual for 2010")
 
 ## Holt Winters ============================================
 HW <- HoltWinters(train)                  
