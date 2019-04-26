@@ -16,12 +16,13 @@ powerWeek <- powerData %>%
   summarise('meter1' = mean(Sub_metering_1),
             'meter2' = mean(Sub_metering_2), 
             'meter3' = mean(Sub_metering_3),
-            'meternon' = mean(Sub_unnumbered)) %>% 
+            'meternon' = mean(Sub_unnumbered),
+            'total_energy_use' = mean(total_energy_use)) %>% 
   mutate(date = as_date(paste(year, month, day, sep="-"), "%Y-%m-%d"),
          #totalpower = meter1 + meter2 + meter3 + meternon) 
-          totalpower = meter3)
+          totalpower = total_energy_use)
          
-ts <- ts(powerWeek$totalpower, start = decimal_date(as.Date(powerWeek$date[1])), end = decimal_date(as.Date(powerWeek$date[nrow(powerWeek)])), frequency = 365)
+ts <- ts(powerWeek$meter1, start = decimal_date(as.Date(powerWeek$date[1])), end = decimal_date(as.Date(powerWeek$date[nrow(powerWeek)])), frequency = 365)
 
 autoplot(ts)
 
@@ -126,17 +127,19 @@ fc <- forecast(taylor.fit, h = 365)
 checkresiduals(taylor.fit)
 
 plotting <- dplyr::bind_rows(
-  data.frame(date=time(fc$fitted), Y=as.matrix(fc$fitted), datasort = "Training"), 
+  data.frame(date=time(train), Y=as.matrix(train), datasort = "Training"), 
   data.frame(date=time(fc$mean), Y=as.matrix(fc$mean), datasort = "Forecast"),
   data.frame(date=time(test2), Y = as.matrix(test2), datasort = "Actual")
 )
 
-plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) + 
+plot <- plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) + 
   geom_line() +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
   theme(axis.text.y = element_blank()) +
   labs(title = "Energy use per day", subtitle = "Forecasted and actual for 2010")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/tbats_msts_modelling_all.jpg')
 
 ## Holt Winters ============================================
 HW <- HoltWinters(train)                  

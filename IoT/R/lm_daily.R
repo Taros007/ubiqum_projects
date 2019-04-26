@@ -71,9 +71,12 @@ test %>%
   geom_line(data = train %>% filter(year == 2009), aes(y = total_energy_use), color = "#FAAB18") +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
+  theme(axis.text.y = element_blank()) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title = "Total energy use",
        subtitle = "Predictions LM")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/lm_modelling_total.jpg')
 
 #Check important variables
 varTun <- varImp(rfFit1)
