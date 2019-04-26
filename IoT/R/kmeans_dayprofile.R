@@ -1,6 +1,7 @@
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
 library(cluster)
+library(lubridate)
 source('./R/BBC_style.R')
 
 # Load preprocessed data --------------------------------------------------
@@ -10,24 +11,10 @@ powerData <- readRDS('./output/powerData.RDS')
 
 totalenergy <- powerData %>% 
   group_by(year, month, day, week, weekday, weekend, day, hour) %>% 
-  summarise('total_energy_use' = sum(total_energy_use) * 60 / 1000) %>% 
+  summarise('total_energy_use' = sum(Sub_unnumbered) / 1000) %>% 
   ungroup() %>% 
   spread(hour, total_energy_use) %>% 
   na.omit()
-
-
-# Plot all daily profiles -------------------------------------------------
-
-powerData %>% 
-  group_by(date = date(DateTime), hour = hour(DateTime)) %>% 
-  summarize(total_energy_use = sum(total_energy_use)) %>% 
-  ungroup() %>% 
-  ggplot() +
-  geom_line(aes(x = as.numeric(hour), y = total_energy_use, group = as.factor(date)), 
-            color = "blue", 
-            alpha = 0.025
-            ) +
-  bbc_style()
 
 # K-means -----------------------------------------------------------------
 
@@ -47,15 +34,17 @@ cluster_means <- cluster_means %>%
   mutate(hour = as.numeric(hour),
          Group.1 = as.factor(Group.1))
 
-cluster_means %>% 
+plot <- cluster_means %>% 
   ggplot(aes(x = as.numeric(hour), y = cluster_mean, color = Group.1)) +
   geom_line(size = 1) +
   geom_hline(yintercept = 0, size = 1, colour="#333333") +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
-  theme(legend.position = "none") +
+  #theme(legend.position = "none") +
   labs(title = "Daily energy profiles", 
-       subtitle = "Submeter 1")
+       subtitle = "Unsubmetered")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles_sub_un.jpg')
 
 #General info
 totalenergy %>% 
@@ -64,8 +53,27 @@ totalenergy %>%
 
 totalenergy %>% 
   group_by(cluster, month) %>% 
-  summarize(n = n()) %>% 
-  View()
+  summarize(n = n())
+
+# Plot all daily profiles -------------------------------------------------
+
+powerData %>% 
+  group_by(date = date(DateTime), hour = hour(DateTime)) %>% 
+  summarize(total_energy_use = sum(Sub_metering_1) / 1000 ) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = hour, y = total_energy_use, group = as.factor(date))) +
+  geom_line(color = "#990000", alpha = 0.03) +
+  geom_line(data = cluster_means, aes(x = hour, y = cluster_mean, group = Group.1),
+            color = "#1380A1",
+            size = 1.5,
+            linetype = "longdash") +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  #theme(axis.text.y = element_blank()) +
+  labs(title = "Daily energy profiles",
+       subtitle = "in kWh")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles.jpg')
 
 # Identifying optimal cluster via Silhouette ---------------------------------------------
 

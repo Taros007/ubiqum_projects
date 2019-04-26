@@ -65,7 +65,7 @@ registerDoParallel(cl)
 for(K in seq(8)) {   #precviously tested to max out at 7
   fit <- auto.arima(train,
                     xreg=fourier(train, K=K),
-                    seasonal=T)
+                    seasonal=F)
   if(fit[["aicc"]] < bestfit[["aicc"]]) {
     bestfit <- fit
     bestK <- K
@@ -79,7 +79,7 @@ fc <- forecast(bestfit,
 autoplot(fc) + autolayer(test)
 
 plotting <- dplyr::bind_rows(
-  data.frame(date=time(fc$fitted), Y=as.matrix(fc$fitted), datasort = "Training"), 
+  data.frame(date=time(train), Y=as.matrix(train), datasort = "Training"), 
   data.frame(date=time(fc$mean), Y=as.matrix(fc$mean), datasort = "Forecast"),
   data.frame(date=time(test), Y = as.matrix(test), datasort = "Actual")
   )
