@@ -115,7 +115,7 @@ dishwasher$weekday <- factor(dishwasher$weekday, c("Monday", "Tuesday", "Wednesd
 
 dishwasher <- dishwasher[dishwasher$avg_energy < 5,]
 
-dishwasher %>%
+plot <- dishwasher %>%
   group_by(year, month) %>% 
   summarize(occurance = length(avg_energy)) %>% 
   ggplot(aes(x = as.Date(paste(year, month, "1", sep = "-"), origin="2012-01-01"), y = occurance)) +
@@ -129,6 +129,9 @@ dishwasher %>%
   labs(title="Use of dishwasher",
        subtitle = "Amount of uses per month")
 
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/dishwasher_use.jpg')
+
+
 dishwasher %>%
   group_by(year, month) %>% 
   summarize(avg_energy = mean(avg_energy)) %>% 
@@ -140,8 +143,11 @@ dishwasher %>%
   bbc_style() +
   scale_x_date(breaks = pretty_breaks(10), labels = date_format("%b-%g")) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  labs(title="Use of dishwasher",
-       subtitle = "Amount of uses per month")
+  labs(title="Average energy use of dishwasher",
+       subtitle = "in kWh")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles.jpg')
+
 
 dishwasher %>%
   group_by(hour) %>% 
