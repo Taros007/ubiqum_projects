@@ -1,5 +1,6 @@
 ## Load libraries ======================
 library(tidyverse)
+library(magrittr)
 library(datetime)
 library(lubridate)
 
@@ -14,6 +15,7 @@ powerData$DateTime <- as.POSIXct(powerData$DateTime, "%d/%m/%Y %H:%M:%S", tz = "
 powerData$year <- year(powerData$DateTime)
 powerData$month <- month(powerData$DateTime)
 powerData$quarter <- quarter(powerData$DateTime)
+powerData$week <- week(powerData$DateTime)
 powerData$day <- day(powerData$DateTime)
 powerData$hour <- hour(powerData$DateTime)
 powerData$minute <- minute(powerData$DateTime)
@@ -41,7 +43,7 @@ powerData$total_energy_use <- sapply((powerData$Global_active_power * 1000 / 60)
 ) 
   
 #Reorder colums, and leave out original Date and Time fields
-powerData <- powerData[c(3:9,19,20,10:18)]
+powerData <- powerData[c(3:9,20,21,10:19)]
 
 #Explore NAs
 # sapply(powerData, function(x) sum(is.na(x)))

@@ -78,8 +78,7 @@ finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 69
 
 powerData %>% 
   group_by(year) %>%
-  summarize(Energy_use = sum(total_energy_use))
-
+  summarize(Energy_use = sum(total_energy_use) / 1000)
 
 ## Plot energy use over 24 hrs ===============================
 graphData <- powerData %>% 
@@ -196,7 +195,7 @@ plot <- ggplot(graphData, aes(x = TIME, y = Value)) +
 #            family="Helvetica",
 #            size = 12)
 
-finalise_plot(plot, "Eurostat", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prices_electricity.jpg')
+finalise_plot(plot, "Source: Eurostat", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prices_electricity.jpg')
 
 ## Plot total costs electricity ==================
 graphData <- powerData %>% 
