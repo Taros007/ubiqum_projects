@@ -10,11 +10,24 @@ powerData <- readRDS('./output/powerData.RDS')
 
 totalenergy <- powerData %>% 
   group_by(year, month, day, week, weekday, weekend, day, hour) %>% 
-  summarise('total_energy_use' = sum(Sub_unnumbered) * 60 / 1000) %>% 
+  summarise('total_energy_use' = sum(total_energy_use) * 60 / 1000) %>% 
   ungroup() %>% 
   spread(hour, total_energy_use) %>% 
   na.omit()
 
+
+# Plot all daily profiles -------------------------------------------------
+
+powerData %>% 
+  group_by(date = date(DateTime), hour = hour(DateTime)) %>% 
+  summarize(total_energy_use = sum(total_energy_use)) %>% 
+  ungroup() %>% 
+  ggplot() +
+  geom_line(aes(x = as.numeric(hour), y = total_energy_use, group = as.factor(date)), 
+            color = "blue", 
+            alpha = 0.025
+            ) +
+  bbc_style()
 
 # K-means -----------------------------------------------------------------
 
