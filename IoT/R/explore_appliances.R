@@ -132,7 +132,7 @@ plot <- dishwasher %>%
 finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/dishwasher_use.jpg')
 
 
-dishwasher %>%
+plot <- dishwasher %>%
   group_by(year, month) %>% 
   summarize(avg_energy = mean(avg_energy)) %>% 
   ggplot(aes(x = as.Date(paste(year, month, "1", sep = "-"), origin="2012-01-01"), y = avg_energy)) +
@@ -146,10 +146,10 @@ dishwasher %>%
   labs(title="Average energy use of dishwasher",
        subtitle = "in kWh")
 
-finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles.jpg')
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/dishwasher_energyuse.jpg')
 
 
-dishwasher %>%
+plot <- dishwasher %>%
   group_by(hour) %>% 
   summarize(avg_energy = length(avg_energy)) %>% 
   ggplot(aes(x = hour, y = avg_energy)) +
@@ -161,6 +161,8 @@ dishwasher %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title="Total amount of uses of dishwasher",
        subtitle = "spread over the day")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/dishwasher_hours.jpg')
 
 y <- dishwasher %>% 
   filter(Washing_found == 1)

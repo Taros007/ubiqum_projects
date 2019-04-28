@@ -146,3 +146,24 @@ HW <- HoltWinters(train)
 autoplot(forecast(HW, h = 365)) + autolayer(test) +
   ggtitle("Weekly energy prediction - HoltWinters") + theme_classic()# plot
 checkresiduals(HW)
+
+## Prophet ============================================
+library(prophet)
+
+train <- powerData[,c("DateTime", "total_energy_use")] %>% 
+  filter(year(DateTime) != 2010) %>% 
+  group_by(date(DateTime)) %>% 
+  summarize(total_energy_use = sum(total_energy_use)) %>% 
+  ungroup() %>% 
+  rename(ds = "date(DateTime)", y = "total_energy_use")
+
+test <- powerData[,c("DateTime", "total_energy_use")] %>% 
+  filter(year(DateTime) == 2010) %>% 
+  group_by(date(DateTime)) %>% 
+  summarize(total_energy_use = sum(total_energy_use)) %>% 
+  ungroup() %>% 
+  rename(ds = "date(DateTime)", y = "total_energy_use")
+
+prophet <- prophet(train)
+autoplot(forecast(prophet, h = 365)) + autolayer(test) + ggtitles("Prophet prediction") +
+  theme_classic()
