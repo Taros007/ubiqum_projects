@@ -165,5 +165,24 @@ test <- powerData[,c("DateTime", "total_energy_use")] %>%
   rename(ds = "date(DateTime)", y = "total_energy_use")
 
 prophet <- prophet(train)
-autoplot(forecast(prophet, h = 365)) + autolayer(test) + ggtitles("Prophet prediction") +
-  theme_classic()
+future <- make_future_dataframe(prophet, periods = 365)
+
+prediction <- predict(prophet, future)
+
+plot(prophet, prediction)
+
+ggplot(prediction, aes(x = ds, y = yhat)) +
+  geom_line()
+
+plotting <- dplyr::bind_rows(
+  data.frame(date=as.character(train$ds), Y=as.matrix(train$y), datasort = "Training"), 
+  data.frame(date=as.character(prediction$ds), Y=as.matrix(prediction$yhat), datasort = "Forecast"),
+  data.frame(date=as.character(test$ds), Y = as.matrix(test$y), datasort = "Actual")
+) %>% 
+  mutate(date = as_date(date))
+
+plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) + 
+  geom_line() +
+  scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
+  bbc_style() +
+  labs(title = "Energy use per day (in Wh)", subtitle = "Forecasted and actual for 2010")
