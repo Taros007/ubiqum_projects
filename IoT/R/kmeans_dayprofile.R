@@ -11,7 +11,7 @@ powerData <- readRDS('./output/powerData.RDS')
 
 totalenergy <- powerData %>% 
   group_by(year, month, day, week, weekday, weekend, day, hour) %>% 
-  summarise('total_energy_use' = sum(Sub_unnumbered) / 1000) %>% 
+  summarise('total_energy_use' = sum(Sub_metering_2) / 1000) %>% 
   ungroup() %>% 
   spread(hour, total_energy_use) %>% 
   na.omit()
@@ -24,7 +24,7 @@ normalizedenergy <- scale(totalenergy[,7:30], center = T, scale = T)
 
 #optimal clusters: all 2, sub1: 3, sub2: 4 sub3: 2 or 5, unnum: 3
 
-clustered <- kmeans(normalizedenergy, centers = 3)  
+clustered <- kmeans(normalizedenergy, centers = 4)  
 totalenergy$cluster <- clustered$cluster
 
 cluster_means <- aggregate(totalenergy[,7:30], list(totalenergy$cluster), mean)
@@ -34,7 +34,7 @@ cluster_means <- cluster_means %>%
   mutate(hour = as.numeric(hour),
          Group.1 = as.factor(Group.1))
 
-plot <- cluster_means %>% 
+cluster_means %>% 
   ggplot(aes(x = as.numeric(hour), y = cluster_mean, color = Group.1)) +
   geom_line(size = 1) +
   geom_hline(yintercept = 0, size = 1, colour="#333333") +
@@ -44,7 +44,7 @@ plot <- cluster_means %>%
   labs(title = "Daily energy profiles", 
        subtitle = "Unsubmetered")
 
-finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles_sub_un.jpg')
+#finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/daily_profiles_sub_un.jpg')
 
 #General info
 totalenergy %>% 
@@ -52,8 +52,19 @@ totalenergy %>%
   summarize(n = n())
 
 totalenergy %>% 
+  group_by(cluster, weekday) %>% 
+  summarize(n = n()) %>% 
+  print(n = 50)
+
+totalenergy %>% 
+  group_by(cluster, year) %>% 
+  summarize(n = n()) %>% 
+  print(n = 50)
+
+totalenergy %>% 
   group_by(cluster, month) %>% 
-  summarize(n = n())
+  summarize(n = n()) %>% 
+  print(n = 50)
 
 # Plot all daily profiles -------------------------------------------------
 

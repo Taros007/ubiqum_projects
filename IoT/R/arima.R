@@ -13,16 +13,16 @@ powerData <- readRDS('./output/powerData.RDS')
 ## Create data per week per submeter ==========================
 powerWeek <- powerData %>% 
   group_by(year, month, day, week, weekday, day) %>% 
-  summarise('meter1' = mean(Sub_metering_1),
-            'meter2' = mean(Sub_metering_2), 
-            'meter3' = mean(Sub_metering_3),
-            'meternon' = mean(Sub_unnumbered),
-            'total_energy_use' = mean(total_energy_use)) %>% 
+  summarise('meter1' = sum(Sub_metering_1),
+            'meter2' = sum(Sub_metering_2), 
+            'meter3' = sum(Sub_metering_3),
+            'meternon' = sum(Sub_unnumbered),
+            'total_energy_use' = sum(total_energy_use)) %>% 
   mutate(date = as_date(paste(year, month, day, sep="-"), "%Y-%m-%d"),
          #totalpower = meter1 + meter2 + meter3 + meternon) 
           totalpower = total_energy_use)
          
-ts <- ts(powerWeek$meter1, start = decimal_date(as.Date(powerWeek$date[1])), end = decimal_date(as.Date(powerWeek$date[nrow(powerWeek)])), frequency = 365)
+ts <- ts(powerWeek$total_energy_use, start = decimal_date(as.Date(powerWeek$date[1])), end = decimal_date(as.Date(powerWeek$date[nrow(powerWeek)])), frequency = 365)
 
 autoplot(ts)
 
@@ -117,10 +117,11 @@ autoplot(forecast(tbatsFit, h = 365)) + autolayer(test) +
 
 ## Multiple seasonality in TS =======================
 
-train2 <- msts(train, seasonal.periods=c(7, 13, 365.25))
-test2 <- msts(test, seasonal.periods=c(7, 13, 365.25))
+train2 <- msts(train, seasonal.periods=c(7, 365.25))
+test2 <- msts(test, seasonal.periods=c(7, 365.25))
 
 taylor.fit <- tbats(train2)
+
 autoplot(forecast(taylor.fit, h = 365)) + autolayer(test2) +
   ggtitle("Weekly energy prediction - Tbats & msts") + theme_classic()# plot
 fc <- forecast(taylor.fit, h = 365)
@@ -136,7 +137,7 @@ plot <- plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) +
   geom_line() +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
-  theme(axis.text.y = element_blank()) +
+  #theme(axis.text.y = element_blank()) +
   labs(title = "Energy use per day", subtitle = "Forecasted and actual for 2010")
 
 finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/tbats_msts_modelling_all.jpg')
@@ -146,3 +147,47 @@ HW <- HoltWinters(train)
 autoplot(forecast(HW, h = 365)) + autolayer(test) +
   ggtitle("Weekly energy prediction - HoltWinters") + theme_classic()# plot
 checkresiduals(HW)
+
+## Prophet ============================================
+library(prophet)
+
+train <- powerData[,c("DateTime", "total_energy_use")] %>% 
+  filter(year(DateTime) != 2010) %>% 
+  group_by(date(DateTime)) %>% 
+  summarize(total_energy_use = sum(total_energy_use)) %>% 
+  ungroup() %>% 
+  rename(ds = "date(DateTime)", y = "total_energy_use")
+
+test <- powerData[,c("DateTime", "total_energy_use")] %>% 
+  filter(year(DateTime) == 2010) %>% 
+  group_by(date(DateTime)) %>% 
+  summarize(total_energy_use = sum(total_energy_use)) %>% 
+  ungroup() %>% 
+  rename(ds = "date(DateTime)", y = "total_energy_use")
+
+prophet <- prophet(train, daily.seasonality = T)
+future <- make_future_dataframe(prophet, periods = 365)
+
+prediction <- predict(prophet, future)
+
+plot(prophet, prediction)
+
+ggplot(prediction, aes(x = ds, y = yhat)) +
+  geom_line()
+
+plotting <- dplyr::bind_rows(
+  data.frame(date=as.character(train$ds), Y=as.matrix(train$y), datasort = "Training"), 
+  data.frame(date=as.character(prediction$ds), Y=as.matrix(prediction$yhat), datasort = "Forecast"),
+  data.frame(date=as.character(test$ds), Y = as.matrix(test$y), datasort = "Actual")
+) %>% 
+  mutate(date = as_date(date)) %>% 
+  filter(year(date) == 2010)
+
+plot <- plotting %>% ggplot(aes(x = (date %>% filter(year(date) == 2010)), y = Y, color = datasort)) + 
+  geom_line() +
+  scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
+  bbc_style() +
+  labs(title = "Energy use per day (in Wh)", subtitle = "Forecasted and actual for 2010")
+
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prophet_modelling_all.jpg')
+
