@@ -28,7 +28,19 @@ Sources:
 Weatherdata: darksky (https://darksky.net/)
 Eneryprices: Eurostat (https://ec.europa.eu/eurostat)
 
+ Om duidelijk te maken hoeveel stroom een kWh is, staan hieronder een paar voorbeelden met wat u ongeveer met één kWh doet:
 
+    Een half uur stofzuigen met een stofzuiger van 2.000 Watt
+    12 gerechten vijf minuten in de magnetron opwarmen
+    Een ledlamp van 5 Watt 200 uur laten branden
+    5 avonden tv kijken
+    Een zuinige koelkast 2 dagen laten koelen
+    25 uur lang een laptop gebruiken
+    Tot wel 100 keer uw smartphone opladen
+    Ongeveer 7 kilometer rijden met een elektrische auto
+    Eén keer de vaatwasser gebruiken
+    Eén keer de wasmachine gebruiken
+    Een half uur de wasdroger gebruiken
 
 R packages: xts, zoo
 
