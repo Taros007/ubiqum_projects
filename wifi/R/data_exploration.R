@@ -1,87 +1,66 @@
-# Qualitative analysis ----------------------------------------------------
 
-'''
-• It covers a surface of 108703m2 including 3 buildings
-with 4 or 5 floors depending on the building.
-• The number of different places (reference points)
-appearing in the database is 933.
-• 21049 sampled points have been captured: 19938 for
-training/learning and 1111 for validation/testing.
-• Dataset independence has been assured by taking
-Validation (or testing) samples 4 months after Training
-ones.
-• The number of different wireless access points (WAPs)
-appearing in the database is 520.
-• Data were collected by more than 20 users using 25
-different models of mobile devices (some users used
-more than one model).
-
-
-001-520 RSSI levels: -100 dBm equals very weak signal, 0 dBm very strong, +100 dBm dummy value for WAP not detected
-521-523 Real world coordinates of the sample points
-524 BuildingID
-525 SpaceID: 0 TI, 1 TD, 2 TC
-526 Relative position with respect to SpaceID: 0 in the room, 1 outside on corridor
-527 UserID
-528 PhoneID
-529 Timestamp
-
-Localization: EPSG:3857 WGS 84 
-
-Ideas:
-Localizations without any WAP detections have not been removed
-Filter all observations >45dBm, as this is only 1.8% of all obserations
-Important for RSSI signal strength: hardware and Android version, way device is held and location
-
-Problems:
-The way a device is carried, as well as objects in the room affect RSSI strength
-
-'''
+# Load data ---------------------------------------------------------------
+source('./R/data_loading.R')
 
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
-library(magrittr)
-library(lubridate)
-
-# Load data ---------------------------------------------------------------
-#wifiData <- read_delim('./input/trainingData.csv', delim = ",")
-#wifiData <- read.table('./input/trainingData.csv', header=TRUE, row.names=NULL, sep = ",")
-
-wifiData <- read.csv('./input/trainingData.csv')
 
 # TEMP: throw out data ----------------------------------------------------
-wifiData %<>% filter(BUILDINGID == 0)
 
-# Adjust variables --------------------------------------------------------
-wifiData %<>% mutate(
-  FLOOR = as.factor(FLOOR),
-  BUILDINGID = as.factor(BUILDINGID),
-  SPACEID = as.factor(SPACEID),
-  RRELATIVEPOSITION = as.factor(RELATIVEPOSITION),
-  USERID = as.factor(USERID),
-  PHONEID = as.factor(PHONEID),
-  TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
-  )
+## Just one building
+#wifiData %<>% filter(BUILDINGID == 0)
 
-# Create location variable ------------------------------------------------
+## Random subset of data
+# take a random sample of size 50 from a dataset mydata
+# sample without replacement
+wifiData <- wifiData[sample(1:nrow(wifiData), 1000,
+                          replace=FALSE),]
 
-#Add coordinates from EPSG3857 (in meters) to EPSG4326 (in degrees) so plotting 
-#in Google Maps and OSM is possible.
-#Note that EPSG3857 is in meters, so use that one for distance calculations
-#https://epsg.io/3857
-#https://epsg.io/4326
+# Check signal strength per user ------------------------------------------
 
-library(rgdal)
-cord.EPSG3857 <- SpatialPoints(cbind(wifiData$LONGITUDE, wifiData$LATITUDE), proj4string = CRS("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"))
-cord.EPSG4326 <- spTransform(cord.EPSG3857, CRS = "+proj=longlat +datum=WGS84 +no_defs")
-wifiData$mapLAT <- cord.EPSG4326@coords[,2]
-wifiData$mapLNG <- cord.EPSG4326@coords[,1]
+# wifiData %>% 
+#   select(c(WAP001:WAP520, USERID)) %>% 
+#   gather(key = "WAP", value = "Signal", -USERID) %>% 
+#   ggplot(aes(x = USERID, y = Signal, color = USERID)) +
+#   geom_jitter() +
+#   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
+#   labs(title = 'Explore signal strength per user') + 
+#   xlab('')
 
 
-# Sample map (can take long time!) ----------------------------------------
+# Create initial baseline models -----------------------------------------------
+set.seed(541)
+source('./R/run_knn.R')
 
-library(leaflet)
+#BUILDINGID model
+modelData <- select(wifiData, c(WAP001:WAP520, BUILDINGID))
+test <- run_knn(modelData, "BUILDINGID")
+postResample(test$Predictions, test$BUILDINGID)
 
-leaflet() %>%
-  addTiles() %>%  # Add default OpenStreetMap map tiles
-  addMarkers(lng=cord.dec@coords[,1], lat=cord.dec@coords[,2], popup="")
+# Accuracy     Kappa 
+# 0.9558233 0.9293653 
+
+#FLOOR model
+modelData <- select(wifiData, c(WAP001:WAP520, FLOOR))
+test <- run_knn(modelData, "FLOOR")
+postResample(test$Predictions, test$FLOOR)
+ 
+# Accuracy     Kappa 
+# 0.7692308 0.7026485 
+
+#LAT model
+modelData <- select(wifiData, c(WAP001:WAP520, LATITUDE))
+test <- run_knn(modelData, "LATITUDE")
+postResample(test$Predictions, test$LATITUDE)
+
+# RMSE   Rsquared        MAE 
+# 12.6229449  0.9601962  7.9544519 
+
+#LNG model
+modelData <- select(wifiData, c(WAP001:WAP520, LONGITUDE))
+test <- run_knn(modelData, "LONGITUDE")
+postResample(test$Predictions, test$LONGITUDE)
+
+# RMSE   Rsquared        MAE 
+# 20.5744473  0.9738948 11.3470134 
+
