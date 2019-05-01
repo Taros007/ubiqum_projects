@@ -183,11 +183,11 @@ plotting <- dplyr::bind_rows(
   mutate(date = as_date(date)) %>% 
   filter(year(date) == 2010)
 
-plot <- plotting %>% ggplot(aes(x = (date %>% filter(year(date) == 2010)), y = Y, color = datasort)) + 
+plot <- plotting %>% ggplot(aes(x = date, y = Y, color = datasort)) + 
   geom_line() +
   scale_colour_manual(values = c("#1380A1", "#990000", "#FAAB18","#588300")) +
   bbc_style() +
   labs(title = "Energy use per day (in Wh)", subtitle = "Forecasted and actual for 2010")
 
-finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prophet_modelling_all.jpg')
+finalise_plot(plot, "UCI (energy data)", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/prophet_modelling_all_forecastonly.jpg')
 
