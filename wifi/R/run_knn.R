@@ -1,11 +1,17 @@
 
 # Load libraries ----------------------------------------------------------
 library(caret)
+library(doParallel)
 
 # Function declaration ----------------------------------------------------
 
 run_knn <- function(modeldata, dependant, p = 0.75) {
-  
+
+  #Load clusters
+  cl <- makeCluster(detectCores() - 1)
+  registerDoParallel(cl)
+    
+  set.seed(621)
   #Create training and testing sets
   train_ids <- createDataPartition(y = modeldata[[dependant]],
                                    p = p,
@@ -30,6 +36,9 @@ run_knn <- function(modeldata, dependant, p = 0.75) {
   # Predicting testset ================================
   test$Predictions <- predict(rfFit1, test)
   
+  # Stop Cluster. 
+  stopCluster(cl)
+  
   # Return test
-  test
+  return(list(predictions = test, model = rfFit1))
 }

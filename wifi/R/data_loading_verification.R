@@ -41,10 +41,10 @@ library(lubridate)
 library(rgdal)
 
 # Load data ---------------------------------------------------------------
-suppressMessages(wifiData <- read_csv('./input/trainingData.csv'))
+suppressMessages(wifiVerification <- read_csv('./input/validationData.csv'))
 
 # Adjust variables --------------------------------------------------------
-wifiData %<>% mutate(
+wifiVerification %<>% mutate(
   FLOOR = as.factor(FLOOR),
   BUILDINGID = as.factor(BUILDINGID),
   SPACEID = as.factor(SPACEID),
@@ -52,14 +52,14 @@ wifiData %<>% mutate(
   USERID = as.factor(USERID),
   PHONEID = as.factor(PHONEID),
   TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
-  )
+)
 
 # Adjust RSSI values ------------------------------------------------------
 
 #Adjust RSSI values to become a sparse matrix (lots of zeros). 
 #Hence, make all values positive by adding 100, and add transform values with -100 into 0s
 
-wifiData %<>% mutate_at(vars(WAP001:WAP520), ~(if_else(. == 100, 0, . + 100)))
+wifiVerification %<>% mutate_at(vars(WAP001:WAP520), ~(if_else(. == 100, 0, . + 100)))
 
 # Create map coordinates ------------------------------------------------
 
@@ -69,11 +69,11 @@ wifiData %<>% mutate_at(vars(WAP001:WAP520), ~(if_else(. == 100, 0, . + 100)))
 #https://epsg.io/3857
 #https://epsg.io/4326
 
-cord.EPSG3857 <- SpatialPoints(cbind(wifiData$LONGITUDE, wifiData$LATITUDE), proj4string = CRS("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"))
+cord.EPSG3857 <- SpatialPoints(cbind(wifiVerification$LONGITUDE, wifiVerification$LATITUDE), proj4string = CRS("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"))
 cord.EPSG4326 <- spTransform(cord.EPSG3857, CRS = "+proj=longlat +datum=WGS84 +no_defs")
-wifiData$mapLAT <- cord.EPSG4326@coords[,2]
-wifiData$mapLNG <- cord.EPSG4326@coords[,1]
+wifiVerification$mapLAT <- cord.EPSG4326@coords[,2]
+wifiVerification$mapLNG <- cord.EPSG4326@coords[,1]
 remove(cord.EPSG3857, cord.EPSG4326)
 
 # Save RDS ----------------------------------------------------------------
-saveRDS(wifiData, './output/wifiData.RDS')
+saveRDS(wifiVerification, './output/wifiDataVerification.RDS')
