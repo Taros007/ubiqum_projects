@@ -6,8 +6,23 @@ source('./R/data_loading_verification.R')
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
 
+# Select building 0 observations ------------------------------------------
+
+wifiData %<>% filter(wifiData$BUILDINGID == 0)
+wifiVerification %<>% filter(wifiVerification$BUILDINGID == 0)
+
+# Adjust variables --------------------------------------------------------
+wifiData %<>% mutate(
+  FLOOR = as.factor(FLOOR),
+  BUILDINGID = as.factor(BUILDINGID),
+  SPACEID = as.factor(SPACEID),
+  RRELATIVEPOSITION = as.factor(RELATIVEPOSITION),
+  USERID = as.factor(USERID),
+  PHONEID = as.factor(PHONEID),
+  TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
+  )
+
 # Remove variables with variance 0 ----------------------------------------
-#TODO: is there a logic in how wifi devices are numbered - in case verification data contains removed WAP data
 constantVars <- which(apply(wifiData, 2, var)==0)
 
 if(length(constantVars)>0){
@@ -15,23 +30,10 @@ if(length(constantVars)>0){
   wifiVerification <- wifiVerification[,-constantVars] 
 }
 
-# TEMP: throw out data ----------------------------------------------------
-
-## Just one building
-#wifiData %<>% filter(BUILDINGID == 0)
-
-## Random subset of data
-# take a random sample of size 50 from a dataset mydata
-# sample without replacement
-set.seed(541)
-
-wifiData <- wifiData[sample(1:nrow(wifiData), 2500,
-                          replace=FALSE),]
-
 # Check signal strength per user ------------------------------------------
-
+# 
 # wifiData %>%
-#   select(c(WAP001:WAP520, USERID)) %>%
+#   select(c(contains("WAP"), "USERID")) %>%
 #   gather(key = "WAP", value = "Signal", -USERID) %>%
 #   ggplot(aes(x = USERID, y = Signal, color = USERID)) +
 #   geom_jitter() +
@@ -39,37 +41,30 @@ wifiData <- wifiData[sample(1:nrow(wifiData), 2500,
 #   labs(title = 'Explore signal strength per user') +
 #   xlab('')
 
-
+# Check observations over time --------------------------------------------
+# 
+# wifiData %>% 
+#   ggplot(aes(x = TIMESTAMP, fill = USERID)) +
+#   geom_histogram(binwidth = 20)
+  
 # Create initial baseline models -----------------------------------------------
-source('./R/run_knn.R')
 
+#Create training and testing sets
+set.seed(541)
+train_ids <- sample(seq_len(nrow(wifiData)), size = floor(0.75 * nrow(wifiData)))
 
-# BUILDINGID model --------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), BUILDINGID))
-test <- run_knn(modelData, "BUILDINGID")
-postResample(test$predictions$Predictions, test$predictions$BUILDINGID)
+train <- wifiData[train_ids,]
+test <- wifiData[-train_ids,]
 
-# Without mutate_at
-# Accuracy Kappa 
-# 1        1 
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.9959839 0.9936849
-
-# Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$BUILDINGID)
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.9684968 0.9505268 
+source('./R/run_model.R')
 
 # FLOOR model -------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), FLOOR))
-test <- run_knn(modelData, "FLOOR")
-postResample(test$predictions$Predictions, test$predictions$FLOOR)
-  
+dependant = "LATITUDE"
+trainData <- select(train, c(contains("WAP"), dependant))
+testData <- select(test, c(contains("WAP"), dependant))
+results <- run_model(trainData, testData, "knn", dependant)
+postResample(results$predictions, pull(testData[,c(dependant)]))
+
 # Without mutate_at
 # Accuracy  Kappa 
 # 0.7651822 0.6943330
@@ -88,8 +83,9 @@ postResample(wifiVerification$Predictions, wifiVerification$FLOOR)
 
 # LAT model ---------------------------------------------------------------
 modelData <- select(wifiData, c(contains("WAP"), LATITUDE))
-test <- run_knn(modelData, "LATITUDE")
+test <- run_knn(modelData, "knn", "LATITUDE")
 postResample(test$predictions$Predictions, test$predictions$LATITUDE)
+coordinates <- data.frame(LATpred = test$predictions$Predictions, LATact = test$predictions$LATITUDE)
 
 # Without mutate_at
 # RMSE        Rsquared   MAE 
@@ -109,8 +105,9 @@ postResample(wifiVerification$Predictions, wifiVerification$LATITUDE)
 
 # LNG model ---------------------------------------------------------------
 modelData <- select(wifiData, c(contains("WAP"), LONGITUDE))
-test <- run_knn(modelData, "LONGITUDE")
+test <- run_knn(modelData, "knn", "LONGITUDE")
 postResample(test$predictions$Predictions, test$predictions$LONGITUDE)
+coordinates <- cbind(coordinates, LNGpred = test$predictions$Predictions, LNGact = test$predictions$LONGITUDE)
 
 # Without mutate_at
 # RMSE        Rsquared   MAE 
@@ -127,3 +124,15 @@ postResample(wifiVerification$Predictions, wifiVerification$LONGITUDE)
 # With mutate_at
 # RMSE        Rsquared  MAE 
 # 34.9828158  0.9183959 15.3340369 
+
+
+# Calculate distance between actual and pred ------------------------------
+
+coordinates$distance <- sqrt(
+  (coordinates$LATpred - coordinates$LATact)^2 + 
+  (coordinates$LNGpred - coordinates$LNGact)^2
+  )
+
+coordinates %>% 
+  ggplot(aes(x=distance)) + 
+  geom_density()

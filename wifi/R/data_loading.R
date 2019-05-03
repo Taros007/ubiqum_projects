@@ -43,16 +43,16 @@ library(rgdal)
 # Load data ---------------------------------------------------------------
 suppressMessages(wifiData <- read_csv('./input/trainingData.csv'))
 
-# Adjust variables --------------------------------------------------------
-wifiData %<>% mutate(
-  FLOOR = as.factor(FLOOR),
-  BUILDINGID = as.factor(BUILDINGID),
-  SPACEID = as.factor(SPACEID),
-  RRELATIVEPOSITION = as.factor(RELATIVEPOSITION),
-  USERID = as.factor(USERID),
-  PHONEID = as.factor(PHONEID),
-  TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
-  )
+# # Adjust variables --------------------------------------------------------
+# wifiData %<>% mutate(
+#   FLOOR = as.factor(FLOOR),
+#   BUILDINGID = as.factor(BUILDINGID),
+#   SPACEID = as.factor(SPACEID),
+#   RRELATIVEPOSITION = as.factor(RELATIVEPOSITION),
+#   USERID = as.factor(USERID),
+#   PHONEID = as.factor(PHONEID),
+#   TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
+#   )
 
 # Adjust RSSI values ------------------------------------------------------
 
@@ -75,5 +75,5 @@ wifiData$mapLAT <- cord.EPSG4326@coords[,2]
 wifiData$mapLNG <- cord.EPSG4326@coords[,1]
 remove(cord.EPSG3857, cord.EPSG4326)
 
-# Save RDS ----------------------------------------------------------------
-saveRDS(wifiData, './output/wifiData.RDS')
+# # Save RDS ----------------------------------------------------------------
+# saveRDS(wifiData, './output/wifiData.RDS')

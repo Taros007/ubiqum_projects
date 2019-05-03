@@ -1,0 +1,38 @@
+
+# Load libraries ----------------------------------------------------------
+library(caret)
+library(doParallel)
+
+# Function declaration ----------------------------------------------------
+
+run_model <- function(traindata, testdata, model, dependant) {
+
+  #Load clusters
+  cl <- makeCluster(detectCores() - 1)
+  registerDoParallel(cl)
+    
+  set.seed(621)
+
+  # cross validation
+  ctrl <- trainControl(method = "repeatedcv",
+                       number = 4,
+                       repeats = 1
+  )
+  
+  #train Random Forest Regression model
+  rfFit1 <- caret::train(as.formula(paste(dependant, "~ .")),
+                         data = traindata,
+                         method = model,
+                         trControl=ctrl,
+                         preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
+  )
+  
+  # Predicting testset ================================
+  testdata$predictions <- predict(rfFit1, testdata)
+  
+  # Stop Cluster. 
+  stopCluster(cl)
+  
+  # Return test
+  return(list(predictions = testdata$predictions, model = rfFit1))
+}

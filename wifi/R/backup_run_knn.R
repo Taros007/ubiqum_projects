@@ -5,7 +5,7 @@ library(doParallel)
 
 # Function declaration ----------------------------------------------------
 
-run_knn <- function(modeldata, dependant, p = 0.75) {
+run_knn <- function(modeldata, model, dependant, p = 0.75) {
 
   #Load clusters
   cl <- makeCluster(detectCores() - 1)
@@ -28,7 +28,7 @@ run_knn <- function(modeldata, dependant, p = 0.75) {
   #train Random Forest Regression model
   rfFit1 <- caret::train(as.formula(paste(dependant, "~ .")),
                          data = train,
-                         method = "knn",
+                         method = model,
                          trControl=ctrl,
                          preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
   )
