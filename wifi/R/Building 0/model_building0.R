@@ -57,12 +57,15 @@ train <- wifiData[train_ids,]
 test <- wifiData[-train_ids,]
 
 source('./R/run_model.R')
+model = "lm"
 
 # FLOOR model -------------------------------------------------------------
-dependant = "LATITUDE"
+dependant = "FLOOR"
 trainData <- select(train, c(contains("WAP"), dependant))
 testData <- select(test, c(contains("WAP"), dependant))
-results <- run_model(trainData, testData, "knn", dependant)
+results <- run_model(trainData, testData, model, dependant)
+
+cat("Resampling results for training of label", dependant, "with model", model, ":\n")
 postResample(results$predictions, pull(testData[,c(dependant)]))
 
 # Without mutate_at
@@ -74,18 +77,23 @@ postResample(results$predictions, pull(testData[,c(dependant)]))
 # 0.8461538 0.8000937 
 
 # Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$FLOOR)
+wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+
+cat("Resampling results for verification of label", dependant, "with model", model, ":\n")
+postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
 
 # With mutate_at
 # Accuracy  Kappa 
 # 0.7488749 0.6502643 
 
 # LAT model ---------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), LATITUDE))
-test <- run_knn(modelData, "knn", "LATITUDE")
-postResample(test$predictions$Predictions, test$predictions$LATITUDE)
-coordinates <- data.frame(LATpred = test$predictions$Predictions, LATact = test$predictions$LATITUDE)
+dependant = "LATITUDE"
+trainData <- select(train, c(contains("WAP"), dependant))
+testData <- select(test, c(contains("WAP"), dependant))
+results <- run_model(trainData, testData, model, dependant)
+
+cat("Resampling results for training of label", dependant, "with model", model, ":\n")
+postResample(results$predictions, pull(testData[,c(dependant)]))
 
 # Without mutate_at
 # RMSE        Rsquared   MAE 
@@ -96,18 +104,25 @@ coordinates <- data.frame(LATpred = test$predictions$Predictions, LATact = test$
 # 15.3765811  0.9518108  8.7828804 
 
 # Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$LATITUDE)
+wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+
+cat("Resampling results for verification of label", dependant, "with model", model, ":\n")
+postResample(wifiVerification$PredictionsLAT, pull(wifiVerification[,c(dependant)]))
 
 # With mutate_at
 # RMSE        Rsquared  MAE 
 # 19.5894360  0.9228687 11.0990749 
 
+coordinates <- data.frame(LATpred = wifiVerification$PredictionsLAT, LATact = pull(wifiVerification[,c(dependant)]))
+
 # LNG model ---------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), LONGITUDE))
-test <- run_knn(modelData, "knn", "LONGITUDE")
-postResample(test$predictions$Predictions, test$predictions$LONGITUDE)
-coordinates <- cbind(coordinates, LNGpred = test$predictions$Predictions, LNGact = test$predictions$LONGITUDE)
+dependant = "LONGITUDE"
+trainData <- select(train, c(contains("WAP"), dependant))
+testData <- select(test, c(contains("WAP"), dependant))
+results <- run_model(trainData, testData, model, dependant)
+
+cat("Resampling results for training of label", dependant, "with model", model, ":\n")
+postResample(results$predictions, pull(testData[,c(dependant)]))
 
 # Without mutate_at
 # RMSE        Rsquared   MAE 
@@ -118,21 +133,34 @@ coordinates <- cbind(coordinates, LNGpred = test$predictions$Predictions, LNGact
 # 16.8034956  0.9819268  8.2522013 
 
 # Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$LONGITUDE)
+wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+
+cat("Resampling results for verification of label", dependant, "with model", model, ":\n")
+postResample(wifiVerification$PredictionsLNG, pull(wifiVerification[,c(dependant)]))
+
+coordinates <- cbind(coordinates, LNGpred = wifiVerification$PredictionsLNG, LNGact = pull(wifiVerification[,c(dependant)]))
 
 # With mutate_at
 # RMSE        Rsquared  MAE 
 # 34.9828158  0.9183959 15.3340369 
 
-
 # Calculate distance between actual and pred ------------------------------
-
 coordinates$distance <- sqrt(
   (coordinates$LATpred - coordinates$LATact)^2 + 
   (coordinates$LNGpred - coordinates$LNGact)^2
   )
 
+wifiVerification$distance <- coordinates$distance
+
 coordinates %>% 
   ggplot(aes(x=distance)) + 
   geom_density()
+
+#View sum of total RSSI-level
+wifiVerification$sum <- rowSums(wifiVerification[, colnames(wifiVerification %>% select(contains("WAP")))])
+checkexceptions <- wifiVerification %>% filter(distance > 50)
+
+cord.EPSG3857 <- SpatialPoints(cbind(checkexceptions$PredictionsLNG, checkexceptions$PredictionsLAT), proj4string = CRS("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"))
+cord.EPSG4326 <- spTransform(cord.EPSG3857, CRS = "+proj=longlat +datum=WGS84 +no_defs")
+checkexceptions$mapPredictionsLAT <- cord.EPSG4326@coords[,2]
+checkexceptions$mapPredictionsLNG <- cord.EPSG4326@coords[,1]
