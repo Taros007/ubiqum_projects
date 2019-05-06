@@ -56,10 +56,9 @@ suppressMessages(wifiData <- read_csv('./input/trainingData.csv'))
 
 # Adjust RSSI values ------------------------------------------------------
 
-#Adjust RSSI values to become a sparse matrix (lots of zeros). 
-#Hence, make all values positive by adding 100, and add transform values with -100 into 0s
+#Hence, transform values with 100 into -200
 
-wifiData %<>% mutate_at(vars(WAP001:WAP520), ~(if_else(. == 100, 0, . + 100)))
+wifiData %<>% mutate_at(vars(WAP001:WAP520), ~(if_else(. == 100, -200, .)))
 
 # Create map coordinates ------------------------------------------------
 
