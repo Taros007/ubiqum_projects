@@ -1,4 +1,12 @@
 
+# Script control ----------------------------------------------------------
+remove_0_var <- T
+replace_RSSI_strongweak <- T
+remove_userID6_weird_signals <- T
+scale_deviceID <- F
+test_juan = T
+model = "svmLinear"
+
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
 source('./R/data_loading_verification.R')
@@ -7,8 +15,8 @@ source('./R/data_loading_verification.R')
 library(tidyverse)
 
 # Select building 0 observations ------------------------------------------
-wifiData %<>% filter(wifiData$BUILDINGID == 0)
-wifiVerification %<>% filter(wifiVerification$BUILDINGID == 0)
+# wifiData %<>% filter(wifiData$BUILDINGID == 1)
+# wifiVerification %<>% filter(wifiVerification$BUILDINGID == 1)
 
 # Adjust variables --------------------------------------------------------
 wifiData %<>% mutate(
@@ -19,25 +27,147 @@ wifiData %<>% mutate(
   USERID = as.factor(USERID),
   PHONEID = as.factor(PHONEID),
   TIMESTAMP = as_datetime(TIMESTAMP, tz = "Europe/Madrid")
-  )
+)
 
 # Replace variables with RSSI >90, <30 with -200 -----------------------------
 
-wifiData <- bind_cols(wifiData %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
-                      wifiData %>% select(-contains("WAP")))
+if (replace_RSSI_strongweak) {
+  wifiData <- bind_cols(wifiData %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
+                        wifiData %>% select(-contains("WAP")))
+  
+  wifiVerification <- bind_cols(wifiVerification %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
+                                wifiVerification %>% select(-contains("WAP")))
+  }
 
-wifiVerification <- bind_cols(wifiVerification %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
-                              wifiVerification %>% select(-contains("WAP")))
+# Remove high value observation for user 6 --------------------------------
+if (remove_userID6_weird_signals) {
+  wifiData[wifiData$USERID==6,] <- bind_cols(wifiData %>% filter(USERID == 6) %>% select(contains("WAP")) %>% replace(. > -25, -200),
+                                             wifiData %>% filter(USERID == 6) %>% select(-contains("WAP")))
+}
 
 # Remove variables with variance 0 ----------------------------------------
-constantVars <- which(apply(wifiData, 2, var) == 0)
+if (remove_0_var) {
+  constantVars <- which(apply(wifiData, 2, var) == 0)
+  
+  if(length(constantVars) > 0){
+    wifiData <- wifiData[,-constantVars]
+    wifiVerification <- wifiVerification[,-constantVars]
+  }
+}
 
-if(length(constantVars) > 0){
-  wifiData <- wifiData[,-constantVars]
-  wifiVerification <- wifiVerification[,-constantVars]
+# Scale each observation to account for device differences ----------------
+
+if (scale_deviceID) {
+  wifiData <- 
+    bind_cols(wifiData %>% 
+      select(contains("WAP")) %>% 
+      replace(. == -200, NA) %>%
+      mutate_all(funs((. - min(., na.rm = T))/(max(., na.rm = T) - min(., na.rm = T)))) %>% 
+      as_tibble(),
+      wifiData %>% select(-contains("WAP")))
+  wifiData[is.na(wifiData)] <- 0
+
+  wifiVerification <- bind_cols(wifiVerification %>% 
+                                  select(contains("WAP")) %>% 
+                                  replace(. == -200, NA) %>%
+                                  mutate_all(funs((. - min(., na.rm = T))/(max(., na.rm = T) - min(., na.rm = T)))) %>% 
+                                  as_tibble(),
+                                  wifiVerification %>% select(-contains("WAP")))
+  wifiVerification[is.na(wifiVerification)] <- 0
+}
+
+if (test_juan) {
+  temp <- as.matrix(wifiData %>% select(starts_with("WAP")))
+  
+  output_min <- vector(mode = "numeric", length = nrow(temp))
+  output_max <- vector(mode = "numeric", length = nrow(temp))
+  output_row <- vector(mode = "numeric", length = ncol(temp))
+  for (i in 1:nrow(temp)) {
+    
+    # vector of values by row
+    for (j in 1:ncol(temp)) {
+      if (temp[[i,j]] != -200) {
+        output_row[j] <- temp[[i,j]]
+      } else {
+        output_row[j] <- NA
+      }
+    }
+    
+    # Minumum values by row
+    if (abs(min(output_row, na.rm = TRUE)) != Inf) {
+      output_min[i] <- min(output_row, na.rm = TRUE)
+    } else {output_min[i] <- NA}
+    
+    # Maximum values by row
+    if (abs(min(output_row, na.rm = TRUE)) != Inf) {
+      output_max[i] <- max(output_row, na.rm = TRUE)
+    } else {output_max[i] <- NA}
+  }
+  
+  # normalize the
+  temp_norm <- temp
+  for (i in 1:nrow(temp)) {
+    for (j in 1:ncol(temp)) {
+      x <- ((temp[[i,j]] - output_min[i]) /
+              (output_max[i] - output_min[i]))
+      if (is.na(x) | x < 0) {
+        temp_norm[[i,j]] <- 0
+      } else {
+        temp_norm[[i,j]] <- x
+      }
+    }
+  }
+  temp_norm <- as_tibble(temp_norm)
+  wifiData <- bind_cols(temp_norm, wifiData %>% select(-contains("WAP")))
+  
+  temp <- as.matrix(wifiVerification %>% select(starts_with("WAP")))
+  
+  output_min <- vector(mode = "numeric", length = nrow(temp))
+  output_max <- vector(mode = "numeric", length = nrow(temp))
+  output_row <- vector(mode = "numeric", length = ncol(temp))
+  for (i in 1:nrow(temp)) {
+    
+    # vector of values by row
+    for (j in 1:ncol(temp)) {
+      if (temp[[i,j]] != -200) {
+        output_row[j] <- temp[[i,j]]
+      } else {
+        output_row[j] <- NA
+      }
+    }
+    
+    # Minumum values by row
+    if (abs(min(output_row, na.rm = TRUE)) != Inf) {
+      output_min[i] <- min(output_row, na.rm = TRUE)
+    } else {output_min[i] <- NA}
+    
+    # Maximum values by row
+    if (abs(min(output_row, na.rm = TRUE)) != Inf) {
+      output_max[i] <- max(output_row, na.rm = TRUE)
+    } else {output_max[i] <- NA}
+  }
+  
+  # normalize the
+  temp_norm <- temp
+  for (i in 1:nrow(temp)) {
+    for (j in 1:ncol(temp)) {
+      x <- ((temp[[i,j]] - output_min[i]) /
+              (output_max[i] - output_min[i]))
+      if (is.na(x) | x < 0) {
+        temp_norm[[i,j]] <- 0
+      } else {
+        temp_norm[[i,j]] <- x
+      }
+    }
+  }
+  temp_norm <- as_tibble(temp_norm)
+  wifiVerification <- bind_cols(temp_norm, wifiVerification %>% select(-contains("WAP")))
 }
 
 # Check signal strength per user ------------------------------------------
+# 
+# wifiData <- wifiData[sample(1:nrow(wifiData), 100,
+#                             replace=FALSE),]
 # 
 # wifiData %>%
 #   select(c(contains("WAP"), "USERID")) %>%
@@ -47,13 +177,27 @@ if(length(constantVars) > 0){
 #   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
 #   labs(title = 'Explore signal strength per user') +
 #   xlab('')
+# 
+# # Check signal strength per WAP ------------------------------------------
+# 
+# wifiData %>%
+#   select(c(contains("WAP"))) %>% 
+#   replace(. == -200, NA) %>% 
+#   gather(key = "WAP", value = "Signal") %>%
+#   ggplot(aes(x = WAP, y = Signal)) +
+#   geom_boxplot()
+#   
+#   geom_jitter() +
+#   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
+#   labs(title = 'Explore signal strength per WAP') +
+#   xlab('')
 
 # Check observations over time --------------------------------------------
 # 
 # wifiData %>% 
 #   ggplot(aes(x = TIMESTAMP, fill = USERID)) +
 #   geom_histogram(binwidth = 20)
-  
+
 # Create initial baseline models -----------------------------------------------
 
 #Create training and testing sets
@@ -64,9 +208,25 @@ train <- wifiData[train_ids,]
 test <- wifiData[-train_ids,]
 
 source('./R/run_model.R')
-model = "svmLinear"
 
-# FLOOR model -------------------------------------------------------------
+# BUILDINGID model -------------------------------------------------------------
+dependant = "BUILDINGID"
+trainData <- select(train, c(contains("WAP"), dependant))
+testData <- select(test, c(contains("WAP"), dependant))
+results <- run_model(trainData, testData, model, dependant)
+
+printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
+cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
+
+train$PredictionsBUILDINGID <- predict(results$model, train)
+test$PredictionsBUILDINGID <- predict(results$model, test)
+
+# Verification data
+wifiVerification$PredictionsBUILDINGID <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+printresult <- postResample(wifiVerification$PredictionsBUILDINGID, pull(wifiVerification[,c(dependant)]))
+cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
+
+# FLOOR model without BUILDINGID -------------------------------------------------------------
 dependant = "FLOOR"
 trainData <- select(train, c(contains("WAP"), dependant))
 testData <- select(test, c(contains("WAP"), dependant))
@@ -77,9 +237,22 @@ cat("Resampling results for training of label", dependant, "with model", model, 
 
 # Verification data
 wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
-
 printresult <- postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
+
+# # FLOOR model with BUILDINGID -------------------------------------------------------------
+# dependant = "FLOOR"
+# trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID))
+# testData <- select(test, c(contains("WAP"), dependant, PredictionsBUILDINGID))
+# results <- run_model(trainData, testData, model, dependant)
+# 
+# printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
+# cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
+# 
+# # Verification data
+# wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"), PredictionsBUILDINGID)))
+# printresult <- postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
+# cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
 # LAT model ---------------------------------------------------------------
 dependant = "LATITUDE"
@@ -92,7 +265,6 @@ cat("Resampling results for training of label", dependant, "with model", model, 
 
 # Verification data
 wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
-
 printresult <- postResample(wifiVerification$PredictionsLAT, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
@@ -109,7 +281,6 @@ cat("Resampling results for training of label", dependant, "with model", model, 
 
 # Verification data
 wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
-
 printresult <- postResample(wifiVerification$PredictionsLNG, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
@@ -118,8 +289,8 @@ coordinates <- cbind(coordinates, LNGpred = wifiVerification$PredictionsLNG, LNG
 # Calculate distance between actual and pred ------------------------------
 coordinates$distance <- sqrt(
   (coordinates$LATpred - coordinates$LATact)^2 + 
-  (coordinates$LNGpred - coordinates$LNGact)^2
-  )
+    (coordinates$LNGpred - coordinates$LNGact)^2
+)
 
 wifiVerification$distance <- coordinates$distance
 
