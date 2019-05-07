@@ -5,7 +5,7 @@ replace_RSSI_strongweak <- T
 remove_userID6_weird_signals <- T
 scale_deviceID <- F
 test_juan <- T
-model = "svmLinear"
+model = "rf"
 
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
