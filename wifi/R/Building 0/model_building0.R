@@ -4,7 +4,7 @@ remove_0_var <- T
 replace_RSSI_strongweak <- T
 remove_userID6_weird_signals <- T
 scale_deviceID <- F
-test_juan = T
+test_juan <- T
 model = "svmLinear"
 
 # Load data ---------------------------------------------------------------
