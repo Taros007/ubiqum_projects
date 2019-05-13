@@ -2,6 +2,7 @@
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
 source('./R/data_loading_verification.R')
+source('./R/BBC_style.R')
 
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
@@ -16,9 +17,6 @@ if(length(constantVars)>0){
 }
 
 # TEMP: throw out data ----------------------------------------------------
-
-## Just one building
-#wifiData %<>% filter(BUILDINGID == 0)
 
 ## Random subset of data
 # take a random sample of size 50 from a dataset mydata
@@ -40,90 +38,56 @@ wifiData <- wifiData[sample(1:nrow(wifiData), 2500,
 #   xlab('')
 
 
-# Create initial baseline models -----------------------------------------------
-source('./R/run_knn.R')
+#Check which users collected info per floor
+wifiData %>% 
+  ggplot(aes(x = LONGITUDE, y = LATITUDE, color = as.factor(USERID)), alpha = 0.5) +
+  geom_point() +
+  facet_grid(BUILDINGID~FLOOR)
+
+#Check amount of observations per floor per building
+wifiData %>% 
+  ggplot(aes(x = FLOOR)) +
+  geom_bar(position = "dodge") +
+  facet_grid(.~BUILDINGID)
+
+#Check amount of observations per floor per building specified for corridor and in room
+wifiData %>% 
+  ggplot(aes(x = FLOOR, fill = as.factor(RELATIVEPOSITION))) +
+  geom_bar(position = "dodge") +
+  facet_grid(.~BUILDINGID, labeller = labeller(BUILDINGID = c(`0` = "Building 1", `1` = "Building 2", '2' = "Building 3"))) +
+  scale_fill_discrete(name = "Position", labels = c("In room", "On corridor")) +
+  labs(title = "Amount of observations", subtitle = "per building, per floor") +
+  bbc_style() +
+  theme(strip.text.x = element_text(size = 15, face = "italic", hjust = 0.5))
+
+#Check amount of observations per spaceID for a specific building
+wifiData %>% 
+  filter(BUILDINGID == 2) %>% 
+  ggplot(aes(x = SPACEID)) +
+  geom_bar(position = "dodge")
+
+#Check signal strengths per WAP per floor per building #not useful
+wifiData %>% 
+  filter(BUILDINGID == 1) %>% 
+  select(contains("WAP"), FLOOR) %>% 
+  gather(key = "WAP", value = "RSSI", -FLOOR) %>%
+  replace(. == -200, NA) %>% 
+  na.omit() %>% 
+  group_by(FLOOR, WAP) %>% 
+  summarize(RSSI = mean(RSSI)) %>% 
+  ggplot(aes(x = WAP, y = RSSI)) +
+  geom_point() +
+  facet_grid(. ~ FLOOR)
+
+wifiData %>% 
+  filter(BUILDINGID == 1) %>% 
+  select(contains("WAP"), FLOOR) %>% 
+  gather(key = "WAP", value = "RSSI", -FLOOR) %>%
+  replace(. == -200, NA) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = WAP, y = RSSI)) +
+  geom_density() +
+  facet_grid(. ~ FLOOR)
 
 
-# BUILDINGID model --------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), BUILDINGID))
-test <- run_knn(modelData, "BUILDINGID")
-postResample(test$predictions$Predictions, test$predictions$BUILDINGID)
 
-# Without mutate_at
-# Accuracy Kappa 
-# 1        1 
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.9959839 0.9936849
-
-# Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$BUILDINGID)
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.9684968 0.9505268 
-
-# FLOOR model -------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), FLOOR))
-test <- run_knn(modelData, "FLOOR")
-postResample(test$predictions$Predictions, test$predictions$FLOOR)
-  
-# Without mutate_at
-# Accuracy  Kappa 
-# 0.7651822 0.6943330
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.8461538 0.8000937 
-
-# Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$FLOOR)
-
-# With mutate_at
-# Accuracy  Kappa 
-# 0.7488749 0.6502643 
-
-# LAT model ---------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), LATITUDE))
-test <- run_knn(modelData, "LATITUDE")
-postResample(test$predictions$Predictions, test$predictions$LATITUDE)
-
-# Without mutate_at
-# RMSE        Rsquared   MAE 
-# 13.9494770  0.9599392  9.1303813
-
-# With mutate_at
-# RMSE        Rsquared   MAE 
-# 15.3765811  0.9518108  8.7828804 
-
-# Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$LATITUDE)
-
-# With mutate_at
-# RMSE        Rsquared  MAE 
-# 19.5894360  0.9228687 11.0990749 
-
-# LNG model ---------------------------------------------------------------
-modelData <- select(wifiData, c(contains("WAP"), LONGITUDE))
-test <- run_knn(modelData, "LONGITUDE")
-postResample(test$predictions$Predictions, test$predictions$LONGITUDE)
-
-# Without mutate_at
-# RMSE        Rsquared   MAE 
-# 15.2954115  0.9850709  9.6400422 
-
-# With mutate_at
-# RMSE        Rsquared   MAE 
-# 16.8034956  0.9819268  8.2522013 
-
-# Verification data
-wifiVerification$Predictions <- predict(test$model, select(wifiVerification, c(contains("WAP"))))
-postResample(wifiVerification$Predictions, wifiVerification$LONGITUDE)
-
-# With mutate_at
-# RMSE        Rsquared  MAE 
-# 34.9828158  0.9183959 15.3340369 

@@ -4,8 +4,9 @@ remove_0_var <- T
 replace_RSSI_strongweak <- T
 remove_userID6_weird_signals <- T
 scale_deviceID <- F
-test_juan <- T
-model = "rf"
+test_juan <- F
+normal_scaling <- T
+model = "knn"
 
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
@@ -162,6 +163,14 @@ if (test_juan) {
   }
   temp_norm <- as_tibble(temp_norm)
   wifiVerification <- bind_cols(temp_norm, wifiVerification %>% select(-contains("WAP")))
+}
+
+if (normal_scaling) {
+  wifiData <- as_tibble(cbind(t(scale(t(wifiData %>% select(contains("WAP"))))),
+                    wifiData %>% select(-contains("WAP")))) %>% na.omit()
+  wifiVerification <- as_tibble(cbind(t(scale(t(wifiVerification %>% select(contains("WAP"))))),
+                                      wifiVerification %>% select(-contains("WAP"))) %>% na.omit()
+  )
 }
 
 # Check signal strength per user ------------------------------------------

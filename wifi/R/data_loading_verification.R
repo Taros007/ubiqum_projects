@@ -73,6 +73,3 @@ cord.EPSG4326 <- spTransform(cord.EPSG3857, CRS = "+proj=longlat +datum=WGS84 +n
 wifiVerification$mapLAT <- cord.EPSG4326@coords[,2]
 wifiVerification$mapLNG <- cord.EPSG4326@coords[,1]
 remove(cord.EPSG3857, cord.EPSG4326)
-
-# Save RDS ----------------------------------------------------------------
-saveRDS(wifiVerification, './output/wifiDataVerification.RDS')

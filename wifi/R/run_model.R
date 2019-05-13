@@ -15,7 +15,7 @@ run_model <- function(traindata, testdata, model, dependant) {
 
   # cross validation
   ctrl <- trainControl(method = "repeatedcv",
-                       number = 4,
+                       number = 10,
                        repeats = 1
   )
   
@@ -24,7 +24,7 @@ run_model <- function(traindata, testdata, model, dependant) {
                          data = traindata,
                          method = model,
                          trControl=ctrl,
-                         preProcess = c("scale", "center") #only used for distance-modelling techniques (knn, SVM)
+                         preProcess = c("zv")
   )
   
   # Predicting testset ================================
