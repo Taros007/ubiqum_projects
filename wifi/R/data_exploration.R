@@ -28,14 +28,53 @@ wifiData <- wifiData[sample(1:nrow(wifiData), 2500,
 
 # Check signal strength per user ------------------------------------------
 
+plot <- wifiData %>%
+  select(c(WAP001:WAP520, PHONEID)) %>%
+  mutate_at(vars(contains("WAP")), function(x) ifelse(x == -200, NA, x)) %>% 
+  gather(key = "WAP", value = "Signal", -PHONEID) %>%
+  ggplot(aes(x = PHONEID, y = Signal, color = PHONEID)) +
+  geom_jitter() +
+  geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
+  labs(title = 'Explore signal strength per user', subtitle = "Training data") +
+  xlab('') +
+  bbc_style() +
+  theme(legend.position = "none")
+
+finalise_plot(plot, "Universitat Jaume I", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/RSSI_per_device_trainingdata.jpg')
+
+plot <- wifiVerification %>%
+  select(c(WAP001:WAP520, PHONEID)) %>%
+  mutate_at(vars(contains("WAP")), function(x) ifelse(x == -200, NA, x)) %>% 
+  gather(key = "WAP", value = "Signal", -PHONEID) %>%
+  ggplot(aes(x = PHONEID, y = Signal, color = PHONEID)) +
+  geom_jitter() +
+  geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
+  labs(title = 'Explore signal strength per user', subtitle = "Verification data") +
+  xlab('') +
+  bbc_style() +
+  theme(legend.position = "none")
+
+finalise_plot(plot, "Universitat Jaume I", width_pixels = 1000, height_pixels = 699, save_filepath = './graphs/RSSI_per_device_verificationdata.jpg')
+
+# # Check signal strength per WAP ------------------------------------------
+# 
 # wifiData %>%
-#   select(c(WAP001:WAP520, USERID)) %>%
-#   gather(key = "WAP", value = "Signal", -USERID) %>%
-#   ggplot(aes(x = USERID, y = Signal, color = USERID)) +
+#   select(c(contains("WAP"))) %>%
+#   replace(. == -200, NA) %>%
+#   gather(key = "WAP", value = "Signal") %>%
+#   ggplot(aes(x = WAP, y = Signal)) +
+#   geom_boxplot()
+# 
 #   geom_jitter() +
 #   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
-#   labs(title = 'Explore signal strength per user') +
+#   labs(title = 'Explore signal strength per WAP') +
 #   xlab('')
+
+# Check observations over time --------------------------------------------
+# 
+# wifiData %>%
+#   ggplot(aes(x = TIMESTAMP, fill = USERID)) +
+#   geom_histogram(binwidth = 20)
 
 
 #Check which users collected info per floor

@@ -4,9 +4,9 @@ remove_0_var <- T
 replace_RSSI_strongweak <- T
 remove_userID6_weird_signals <- T
 scale_deviceID <- F
-test_juan <- F
-normal_scaling <- T
-model = "knn"
+test_juan <- T
+normal_scaling <- F
+model = "xgbLinear"
 
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
@@ -31,7 +31,6 @@ wifiData %<>% mutate(
 )
 
 # Replace variables with RSSI >90, <30 with -200 -----------------------------
-
 if (replace_RSSI_strongweak) {
   wifiData <- bind_cols(wifiData %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
                         wifiData %>% select(-contains("WAP")))
@@ -57,7 +56,6 @@ if (remove_0_var) {
 }
 
 # Scale each observation to account for device differences ----------------
-
 if (scale_deviceID) {
   wifiData <- 
     bind_cols(wifiData %>% 
@@ -173,42 +171,7 @@ if (normal_scaling) {
   )
 }
 
-# Check signal strength per user ------------------------------------------
-# 
-# wifiData <- wifiData[sample(1:nrow(wifiData), 100,
-#                             replace=FALSE),]
-# 
-# wifiData %>%
-#   select(c(contains("WAP"), "USERID")) %>%
-#   gather(key = "WAP", value = "Signal", -USERID) %>%
-#   ggplot(aes(x = USERID, y = Signal, color = USERID)) +
-#   geom_jitter() +
-#   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
-#   labs(title = 'Explore signal strength per user') +
-#   xlab('')
-# 
-# # Check signal strength per WAP ------------------------------------------
-# 
-# wifiData %>%
-#   select(c(contains("WAP"))) %>% 
-#   replace(. == -200, NA) %>% 
-#   gather(key = "WAP", value = "Signal") %>%
-#   ggplot(aes(x = WAP, y = Signal)) +
-#   geom_boxplot()
-#   
-#   geom_jitter() +
-#   geom_violin(scale = 'area', alpha = 0.7, fill = '#808000') +
-#   labs(title = 'Explore signal strength per WAP') +
-#   xlab('')
-
-# Check observations over time --------------------------------------------
-# 
-# wifiData %>% 
-#   ggplot(aes(x = TIMESTAMP, fill = USERID)) +
-#   geom_histogram(binwidth = 20)
-
-# Create initial baseline models -----------------------------------------------
-
+# Modelling ---------------------------------------------------------------
 #Create training and testing sets
 set.seed(541)
 train_ids <- sample(seq_len(nrow(wifiData)), size = floor(0.75 * nrow(wifiData)))
@@ -236,64 +199,96 @@ printresult <- postResample(wifiVerification$PredictionsBUILDINGID, pull(wifiVer
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
 # FLOOR model without BUILDINGID -------------------------------------------------------------
-dependant = "FLOOR"
-trainData <- select(train, c(contains("WAP"), dependant))
-testData <- select(test, c(contains("WAP"), dependant))
-results <- run_model(trainData, testData, model, dependant)
-
-printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
-cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
-
-# Verification data
-wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
-printresult <- postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
-cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
-
-# # FLOOR model with BUILDINGID -------------------------------------------------------------
 # dependant = "FLOOR"
-# trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID))
-# testData <- select(test, c(contains("WAP"), dependant, PredictionsBUILDINGID))
+# trainData <- select(train, c(contains("WAP"), dependant))
+# testData <- select(test, c(contains("WAP"), dependant))
 # results <- run_model(trainData, testData, model, dependant)
 # 
 # printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
 # cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
 # 
 # # Verification data
-# wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"), PredictionsBUILDINGID)))
+# wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
 # printresult <- postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
 # cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
+# FLOOR model with BUILDINGID -------------------------------------------------------------
+dependant = "FLOOR"
+trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID))
+testData <- select(test, c(contains("WAP"), dependant, PredictionsBUILDINGID))
+results <- run_model(trainData, testData, model, dependant)
+
+printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
+cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
+
+train$PredictionsFLOOR <- predict(results$model, train)
+test$PredictionsFLOOR <- predict(results$model, test)
+
+# Verification data
+wifiVerification$PredictionsFLOOR <- predict(results$model, select(wifiVerification, c(contains("WAP"), PredictionsBUILDINGID)))
+printresult <- postResample(wifiVerification$PredictionsFLOOR, pull(wifiVerification[,c(dependant)]))
+cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
+
 # LAT model ---------------------------------------------------------------
+# dependant = "LATITUDE"
+# trainData <- select(train, c(contains("WAP"), dependant))
+# testData <- select(test, c(contains("WAP"), dependant))
+# results <- run_model(trainData, testData, model, dependant)
+# 
+# printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
+# cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
+# 
+# # Verification data
+# wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+# printresult <- postResample(wifiVerification$PredictionsLAT, pull(wifiVerification[,c(dependant)]))
+# cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
+# 
+# coordinates <- data.frame(LATpred = wifiVerification$PredictionsLAT, LATact = pull(wifiVerification[,c(dependant)]))
+
+# LNG model ---------------------------------------------------------------
+# dependant = "LONGITUDE"
+# trainData <- select(train, c(contains("WAP"), dependant))
+# testData <- select(test, c(contains("WAP"), dependant))
+# results <- run_model(trainData, testData, model, dependant)
+# 
+# printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
+# cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
+# 
+# # Verification data
+# wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+# printresult <- postResample(wifiVerification$PredictionsLNG, pull(wifiVerification[,c(dependant)]))
+# cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
+# 
+# coordinates <- cbind(coordinates, LNGpred = wifiVerification$PredictionsLNG, LNGact = pull(wifiVerification[,c(dependant)]))
+
+# LAT model with BUILDINGID and FLOOR ---------------------------------------------------------------
 dependant = "LATITUDE"
-trainData <- select(train, c(contains("WAP"), dependant))
-testData <- select(test, c(contains("WAP"), dependant))
+trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID, PredictionsFLOOR))
+testData <- select(test, c(contains("WAP"), dependant, PredictionsBUILDINGID, PredictionsFLOOR))
 results <- run_model(trainData, testData, model, dependant)
 
 printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
 cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
 
 # Verification data
-wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerification, c(contains("WAP"), PredictionsBUILDINGID, PredictionsFLOOR)))
 printresult <- postResample(wifiVerification$PredictionsLAT, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
-coordinates <- data.frame(LATpred = wifiVerification$PredictionsLAT, LATact = pull(wifiVerification[,c(dependant)]))
-
-# LNG model ---------------------------------------------------------------
+# LNG model with BUILDINGID and FLOOR ---------------------------------------------------------------
 dependant = "LONGITUDE"
-trainData <- select(train, c(contains("WAP"), dependant))
-testData <- select(test, c(contains("WAP"), dependant))
+trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID, PredictionsFLOOR))
+testData <- select(test, c(contains("WAP"), dependant, PredictionsBUILDINGID, PredictionsFLOOR))
 results <- run_model(trainData, testData, model, dependant)
 
 printresult <- postResample(results$predictions, pull(testData[,c(dependant)]))
 cat("Resampling results for training of label", dependant, "with model", model, ":\n", printresult, "\n")
 
 # Verification data
-wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerification, c(contains("WAP"))))
+wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerification, c(contains("WAP"), PredictionsBUILDINGID, PredictionsFLOOR)))
 printresult <- postResample(wifiVerification$PredictionsLNG, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
-coordinates <- cbind(coordinates, LNGpred = wifiVerification$PredictionsLNG, LNGact = pull(wifiVerification[,c(dependant)]))
 
 # Calculate distance between actual and pred ------------------------------
 coordinates$distance <- sqrt(
@@ -311,7 +306,7 @@ coordinates %>%
 wifiVerification$sum <- rowSums(wifiVerification[, colnames(wifiVerification %>% select(contains("WAP")))])
 checkexceptions <- wifiVerification %>% filter(distance > 50)
 
-#Check erros on the map
+#Check errors on the map
 cord.EPSG3857 <- SpatialPoints(cbind(checkexceptions$PredictionsLNG, checkexceptions$PredictionsLAT), proj4string = CRS("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"))
 cord.EPSG4326 <- spTransform(cord.EPSG3857, CRS = "+proj=longlat +datum=WGS84 +no_defs")
 checkexceptions$mapPredictionsLAT <- cord.EPSG4326@coords[,2]
