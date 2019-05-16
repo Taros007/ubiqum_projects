@@ -6,7 +6,7 @@ remove_userID6_weird_signals <- T
 scale_deviceID <- F
 test_juan <- T
 normal_scaling <- F
-model = "xgbLinear"
+model = "knn"
 
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
@@ -32,7 +32,7 @@ wifiData %<>% mutate(
 
 # Replace variables with RSSI >90, <30 with -200 -----------------------------
 if (replace_RSSI_strongweak) {
-  wifiData <- bind_cols(wifiData %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
+  wifiData <- bind_cols(wifiData %>% select(contains("WAP")) %>% replace(. > -30 | . < -90, -200),
                         wifiData %>% select(-contains("WAP")))
   
   wifiVerification <- bind_cols(wifiVerification %>% select(contains("WAP")) %>% replace(. > -10 | . < -90, -200),
@@ -275,6 +275,8 @@ wifiVerification$PredictionsLAT <- predict(results$model, select(wifiVerificatio
 printresult <- postResample(wifiVerification$PredictionsLAT, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
+coordinates <- data.frame(LATpred = wifiVerification$PredictionsLAT, LATact = pull(wifiVerification[,c(dependant)]))
+
 # LNG model with BUILDINGID and FLOOR ---------------------------------------------------------------
 dependant = "LONGITUDE"
 trainData <- select(train, c(contains("WAP"), dependant, PredictionsBUILDINGID, PredictionsFLOOR))
@@ -289,6 +291,7 @@ wifiVerification$PredictionsLNG <- predict(results$model, select(wifiVerificatio
 printresult <- postResample(wifiVerification$PredictionsLNG, pull(wifiVerification[,c(dependant)]))
 cat("Resampling results for verification of label", dependant, "with model", model, ":\n", printresult, "\n")
 
+coordinates <- cbind(coordinates, LNGpred = wifiVerification$PredictionsLNG, LNGact = pull(wifiVerification[,c(dependant)]))
 
 # Calculate distance between actual and pred ------------------------------
 coordinates$distance <- sqrt(
@@ -300,7 +303,10 @@ wifiVerification$distance <- coordinates$distance
 
 coordinates %>% 
   ggplot(aes(x=distance)) + 
-  geom_density()
+  geom_density() +
+  labs(title = "Position prediction error", 
+       subtitle = "for verification data, in m") +
+  bbc_style()
 
 #View sum of total RSSI-level
 wifiVerification$sum <- rowSums(wifiVerification[, colnames(wifiVerification %>% select(contains("WAP")))])

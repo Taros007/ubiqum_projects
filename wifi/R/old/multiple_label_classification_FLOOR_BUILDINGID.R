@@ -12,7 +12,7 @@
 
 # Load data ---------------------------------------------------------------
 source('./R/data_loading.R')
-source('./R/undummy.R')
+source('./R/old/undummy.R')
 
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
@@ -25,11 +25,11 @@ library(parallelMap)
 parallelStartSocket(2)
 
 # Sample Data -------------------------------------------------------------
-wifiData <- wifiData[sample(1:nrow(wifiData), 10000,
-                           replace=FALSE),]
+# wifiData <- wifiData[sample(1:nrow(wifiData), 10000,
+#                            replace=FALSE),]
 
 # Select variables --------------------------------------------------------
-wifiData %<>% select(-c("LONGITUDE", "LATITUDE", "TIMESTAMP", "RRELATIVEPOSITION", "RELATIVEPOSITION", "SPACEID", "USERID", "PHONEID", "mapLAT", "mapLNG"))
+wifiData %<>% select(-c( "LONGITUDE", "LATITUDE", "TIMESTAMP", "RRELATIVEPOSITION", "RELATIVEPOSITION", "SPACEID", "USERID", "PHONEID", "mapLAT", "mapLNG"))
 label_vars <- c("BUILDINGID", "FLOOR")
 
 #Create training and testing sets
@@ -140,6 +140,37 @@ predictions$FLOOR <- undummify(c("FLOOR_0", "FLOOR_1", "FLOOR_2", "FLOOR_3", "FL
 
 measureACC(test[,"BUILDINGID"], predictions[,"BUILDINGID"])
 measureACC(test[,"FLOOR"], predictions[,"FLOOR"])
+
+test$PredictionsBUILDINGID <- predictions$BUILDINGID
+test$PredictionsFLOOR <- predictions$FLOOR
+test %<>% filter(!is.na(PredictionsFLOOR))
+
+measureACC(test[,"BUILDINGID"], test[,"PredictionsBUILDINGID"])
+measureACC(test[,"FLOOR"], test[,"PredictionsFLOOR"])
+
+#Verification data
+source('./R/data_loading_verification.R')
+verificationData <- predict(pc, newdata=wifiVerification)
+verificationData <- as.data.frame(verificationData)
+
+#Predicting verification data
+predictions <- predict(modelRFSRC, newdata = verificationData)
+predictions <- as.data.frame(predictions)
+colnames(predictions) <- labels
+
+predictions$BUILDINGID <- undummify(c("BUILDINGID_0",  "BUILDINGID_1", "BUILDINGID_2"), predictions) -1
+predictions$FLOOR <- undummify(c("FLOOR_0", "FLOOR_1", "FLOOR_2", "FLOOR_3", "FLOOR_4" ), predictions) -1
+
+measureACC(wifiVerification[,"BUILDINGID"], predictions[,"BUILDINGID"])
+measureACC(wifiVerification[,"FLOOR"], predictions[,"FLOOR"])
+
+wifiVerification$PredictionsBUILDINGID <- predictions$BUILDINGID
+wifiVerification$PredictionsFLOOR <- predictions$FLOOR
+wifiVerification %<>% filter(!is.na(PredictionsFLOOR))
+
+measureACC(wifiVerification[,"BUILDINGID"], wifiVerification[,"PredictionsBUILDINGID"])
+measureACC(wifiVerification[,"FLOOR"], wifiVerification[,"PredictionsFLOOR"])
+
 
 # Stop clusters -----------------------------------------------------------
 parallelStop()

@@ -20,24 +20,28 @@ if (remove_userID6_weird_signals) {
                                                 wifiData %>% filter(PHONEID == 19) %>% select(-contains("WAP")))
 }
 
-
 # #Remove WAPs that lead to faulty predictions
 # wifiData %<>% select(-(c("WAP086", "WAP202", "WAP296", "WAP445", "WAP487")))
 #wifiData %<>% select(-(c("WAP035", "WAP036", "WAP057", "WAP058")))
 # Average all RSSI signals per floor per building -------------------------
 
-# Create the function.
-getmode <- function(v) {
-  uniqv <- unique(v)
-  uniqv[which.max(tabulate(match(v, uniqv)))]
-}
+#first the plot
+# wifiData %>%
+#   unite(col = coordinates, LATITUDE, LONGITUDE, FLOOR, BUILDINGID, sep = "x") %>%
+#   replace(. == -200, NA) %>%
+#   group_by(coordinates) %>% 
+#   summarize(count = n()) %>% 
+#   ggplot(aes(x = count)) +
+#   geom_histogram(binwidth = 5) +
+#   bbc_style() +
+#   labs(title = "Observations with identical coordinates", subtitle = "LATxLNGxBUILDINGIDxFLOOR")
 
-wifiData %<>% 
+wifiData %<>%
   unite(col = coordinates, LATITUDE, LONGITUDE, FLOOR, BUILDINGID, sep = "x") %>%
-  replace(. == -200, NA) %>% 
-  group_by(coordinates) %>% 
-  summarize_at(vars(contains("WAP")), mean) %>% 
-  separate(coordinates, sep = "x", into = c("LATITUDE", "LONGITUDE", "FLOOR", "BUILDINGID")) %>% 
+  replace(. == -200, NA) %>%
+  group_by(coordinates) %>%
+  summarize_at(vars(contains("WAP")), mean) %>%
+  separate(coordinates, sep = "x", into = c("LATITUDE", "LONGITUDE", "FLOOR", "BUILDINGID")) %>%
   mutate(LATITUDE = as.numeric(LATITUDE),
          LONGITUDE = as.numeric(LONGITUDE),
          FLOOR = as.numeric(FLOOR),

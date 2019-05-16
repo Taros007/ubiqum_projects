@@ -19,16 +19,6 @@ wifiVerification$PredictionsBUILDINGID <- NA
 n <- 1
 S <- -1000
 for (user in 1:nrow(wifiVerification)) {
-  # selected_user <- wifiVerification[user,] %>%
-  #   select(contains("WAP")) %>%
-  #   rownames_to_column %>% #transpose tibble
-  #   gather(var, value, -rowname) %>% #transpose tibble
-  #   spread(rowname, value) %>% #transpose tibble
-  #   filter_all(all_vars(. != -200)) %>% #remove WAPs without signal !!!!CHECK
-  #   rename("WAP" = var, "RSSI" = '1') %>%
-  #   left_join(., WAPlocations, by = "WAP") %>% #add WAP locations (not to be confused with user location)
-  #   na.omit()
-  
   selected_user <- wifiVerification[user,] %>%
     select(contains("WAP")) %>%
     rownames_to_column %>% #transpose tibble
@@ -90,7 +80,8 @@ wifiVerification %>%
   ggplot(aes(x=Distance)) + 
   geom_density() +
   labs(title = "Position prediction error", 
-       subtitle = "for verification data, in m")
+       subtitle = "for verification data, in m") +
+  bbc_styl
 
 #Analyse whether errors are related to floor
 wifiVerification %>% 
@@ -182,9 +173,8 @@ wifiVerification %>%
   ggplot(aes(x = WAP, y = (WrongFloor - RightFloor))) +
   geom_point()
   
-# wifiVerification %>% 
-#   filter(BUILDINGID == 0) %>% 
-#   mutate(FLOOR = factor(FLOOR),
-#          PredictionsFLOOR = factor(PredictionsFLOOR)) %>%
-#   confusionMatrix(.$FLOOR, .$PredictionsFLOOR)
-# confusionMatrix(factor(x$FLOOR), factor(x$PredictionsFLOOR))
+conf <- wifiVerification %>%
+  mutate(PredictionsFLOOR = droplevels(factor(PredictionsFLOOR)),
+         FLOOR = droplevels(factor(FLOOR)))
+confusionMatrix(conf$FLOOR, conf$PredictionsFLOOR)
+
