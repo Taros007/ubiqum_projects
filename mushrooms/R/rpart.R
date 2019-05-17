@@ -11,10 +11,8 @@ mushData %<>% select(-c("odor", contains("veil"), contains("gill"), ring.type, c
 mushData %<>% select(
   c(
     "class",
-    "cap.color",
-    "ring.number",
+   # "cap.color",
     "spore.print.color",
-    "stalk.shape",
     "stalk.root",
     "bruises"
   )
@@ -71,7 +69,6 @@ train2 <- train %>%
   mutate(
   class = factor(class),
   cap.color = factor(cap.color),
-  ring.number = factor(ring.number),
   spore.print.color = factor(spore.print.color),
   stalk.shape = factor(stalk.shape),
   stalk.root = factor(stalk.root),
@@ -82,5 +79,8 @@ classif.lrn = makeLearner("classif.randomForest", predict.type = "prob", fix.fac
 mod = train(classif.lrn, classif.task)
 task.pred = predict(mod, newdata = test2)
 calculateConfusionMatrix(task.pred)
+
+costsens.task = makeCostSensTask(data = train2, cost = matrix(c(0, 3, 1, 0), byrow = TRUE, nrow = 2
+))
 
 save(mod, file = './output/modelToine3.rds')
