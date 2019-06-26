@@ -7,13 +7,14 @@ library(doParallel)
 
 # Load data ---------------------------------------------------------------
 mushData <- read_rds('./input/train.rds')
-mushData %<>% select(-c("odor", contains("veil"), contains("gill"), ring.type, cap.surface, population, habitat))
+#mushData %<>% select(-c("odor", contains("veil"), contains("gill"), ring.type, cap.surface, population, habitat))
 mushData %<>% select(
   c(
     "class",
-   # "cap.color",
-    "spore.print.color",
-    "stalk.root",
+    "cap.color",
+    "stalk.color.above.ring",
+    "stalk.color.below.ring",
+    "population",
     "bruises"
   )
 )
@@ -23,7 +24,7 @@ mushData %<>% select(
 #important: bruises, stalk, ring, spore
 #Investigate whether gill.size and gill.color is available in verification data
 
-table(mushData$class, mushData$stalk.root, exclude = NULL)
+table(mushData$class, mushData$cap.color, exclude = NULL)
 
 set.seed(541)
 # train and test
@@ -38,7 +39,7 @@ fit <- rpart(
   data = mushData,
   method = "class",
   parms = list(split = "information", loss = matrix(
-    c(0, 3, 1, 0), byrow = TRUE, nrow = 2
+    c(0, 2, 1, 0), byrow = TRUE, nrow = 2
   )),
   control = rpart.control(usesurrogate = 0, maxsurrogate = 0)
 )
@@ -57,7 +58,7 @@ confusionMatrix(data = factor(test$Predictions),
 fit2 <-
   prune(fit, cp = fit$cptable[which.min(fit$cptable[, "xerror"]), "CP"])
 
-save(fit, file = './output/modelToine2.rds')
+save(fit, file = './output/modelToine4.rds')
 
 library(rattle)
 library(rpart.plot)
@@ -69,13 +70,13 @@ train2 <- train %>%
   mutate(
   class = factor(class),
   cap.color = factor(cap.color),
-  spore.print.color = factor(spore.print.color),
-  stalk.shape = factor(stalk.shape),
-  stalk.root = factor(stalk.root),
-  bruises = factor(bruises)
+  # spore.print.color = factor(spore.print.color),
+  # stalk.shape = factor(stalk.shape),
+  # stalk.root = factor(stalk.root),
+  # bruises = factor(bruises)
   )
 classif.task = makeClassifTask(data = train2, target = "class", positive = "e")
-classif.lrn = makeLearner("classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+classif.lrn = makeLearner("classif.knn", predict.type = "prob", fix.factors.prediction = TRUE)
 mod = train(classif.lrn, classif.task)
 task.pred = predict(mod, newdata = test2)
 calculateConfusionMatrix(task.pred)

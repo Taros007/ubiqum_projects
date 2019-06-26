@@ -7,7 +7,7 @@ library(doParallel)
 
 # Load data ---------------------------------------------------------------
 mushData <- read_rds('./input/train.rds')
-mushData %<>% select(-c("odor", contains("veil"), gill.attachment, population, habitat))
+mushData %<>% select(c("class", "cap.color"))
 
 #veil.color - not very much difference
 #veil.
@@ -53,8 +53,14 @@ rfFit1 <- caret::train(class~ .,
 # Stop Cluster. 
 stopCluster(cl)
 
+fit <- rpart(class ~ ., data=mushData, method="class", 
+             parms=list(split="information", loss=matrix(c(0,4,1,0), byrow=TRUE, nrow=2)), 
+             control=rpart.control(usesurrogate=0,maxsurrogate=0))
+
+
 # Predicting testset ================================
-test$Predictions <- predict(rfFit1, test)
+model <- fit
+test$Predictions <- predict(model, test)
 postResample(factor(test$Predictions), factor(test$class))
 
 confusionMatrix(data = factor(test$Predictions), reference = factor(test$class))
