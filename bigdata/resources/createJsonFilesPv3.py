@@ -15,7 +15,7 @@ be placed.
 ## CHANGED PRIOR TO RUNNING THIS SCRIPT
 
 scriptsPath =  "s3://mappertano/"
-outputPath = "s3://outputtano/20190521run1/"
+outputPath = "s3://outputtano/20190522run1/"
 
 
 
